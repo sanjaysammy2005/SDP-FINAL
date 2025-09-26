@@ -49,10 +49,10 @@ public class LeaveRequestService {
         return leaveRequestRepository.findById(id);
     }
 
-    @Transactional(readOnly = true)
+    /*@Transactional(readOnly = true)
     public List<LeaveRequest> getLeaveRequestsByEmployeeId(Long employeeId) {
         return leaveRequestRepository.findByEmployeeId(employeeId);
-    }
+    }*/
 
     @Transactional(readOnly = true)
     public List<LeaveRequest> getLeaveRequestsByStatus(LeaveStatus status) {
@@ -75,7 +75,7 @@ public class LeaveRequestService {
 
     @Transactional(readOnly = true)
     public boolean isLeaveRequestOverlapping(Long employeeId, LocalDate startDate, LocalDate endDate) {
-        return leaveRequestRepository.existsByEmployeeIdAndStartDateLessThanEqualAndEndDateGreaterThanEqualAndStatus(
+        return leaveRequestRepository.existsByEmployee_IdAndStartDateLessThanEqualAndEndDateGreaterThanEqualAndStatus(
                 employeeId, endDate, startDate, LeaveStatus.APPROVED);
     }
 

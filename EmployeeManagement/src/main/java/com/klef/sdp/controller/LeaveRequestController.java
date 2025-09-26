@@ -59,10 +59,10 @@ public class LeaveRequestController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @GetMapping("/employee/{employeeId}")
+    /*@GetMapping("/employee/{employeeId}")
     public ResponseEntity<List<LeaveRequest>> getLeaveRequestsByEmployee(@PathVariable Long employeeId) {
         return ResponseEntity.ok(leaveRequestService.getLeaveRequestsByEmployeeId(employeeId));
-    }
+    }*/
 
     @GetMapping("/status/{status}")
     public ResponseEntity<List<LeaveRequest>> getLeaveRequestsByStatus(@PathVariable LeaveStatus status) {
