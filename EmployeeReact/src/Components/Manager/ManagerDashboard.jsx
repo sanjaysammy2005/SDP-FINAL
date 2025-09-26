@@ -28,6 +28,7 @@ const ManagerDashboard = () => {
   const location = useLocation();
   const managerName = localStorage.getItem("userName") || "Manager";
   //const API_BASE_URL = 'http://localhost:8080';
+  //
   const baseUrl = `${import.meta.env.VITE_API_URL}`;
 
   useEffect(() => {
