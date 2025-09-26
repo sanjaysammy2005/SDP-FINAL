@@ -1,6 +1,6 @@
 package com.klef.sdp.service;
 
-import java.io.ObjectInputFilter.Status;
+//import java.io.ObjectInputFilter.Status;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,7 +22,7 @@ public class EmployeeService {
 	@Autowired
 	private ManagerRepo mrepo;
 	@Autowired
-    private EmailService emailService;
+    //private EmailService emailService;
     public void addEmployee(Employee employee) {
         repo.save(employee);
     }

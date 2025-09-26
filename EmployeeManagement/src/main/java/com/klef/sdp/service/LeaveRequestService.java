@@ -49,10 +49,10 @@ public class LeaveRequestService {
         return leaveRequestRepository.findById(id);
     }
 
-    /*@Transactional(readOnly = true)
+    @Transactional(readOnly = true)
     public List<LeaveRequest> getLeaveRequestsByEmployeeId(Long employeeId) {
-        return leaveRequestRepository.findByEmployeeId(employeeId);
-    }*/
+        return leaveRequestRepository.findByEmployee_Id(employeeId);
+    }
 
     @Transactional(readOnly = true)
     public List<LeaveRequest> getLeaveRequestsByStatus(LeaveStatus status) {
