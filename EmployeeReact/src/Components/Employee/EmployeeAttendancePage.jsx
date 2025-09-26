@@ -109,6 +109,11 @@ const EmployeeAttendancePage = () => {
               </Nav.Link>
             </Nav.Item>
             <Nav.Item>
+                          <Nav.Link as={Link} to="/tasks" className={getLinkClass("/tasks")}>
+                            <i className="bi bi-list-task me-2"></i>My Tasks
+                          </Nav.Link>
+                        </Nav.Item>
+            <Nav.Item>
               <Nav.Link as={Link} to="/profile" className="text-white">
                 <i className="bi bi-person-lines-fill me-2"></i>Profile
               </Nav.Link>
