@@ -3,14 +3,13 @@ package com.klef.sdp.controller;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
-
 import com.klef.sdp.enums.LeaveStatus;
 import com.klef.sdp.model.LeaveRequest;
 import com.klef.sdp.service.LeaveRequestService;
-
 import java.net.URI;
 import java.time.LocalDate;
 import java.util.List;
+
 @CrossOrigin("*")
 @RestController
 @RequestMapping("/api/leave-requests")
@@ -28,23 +27,23 @@ public class LeaveRequestController {
             @RequestParam String startDate,
             @RequestParam String endDate,
             @RequestParam(required = false) String description) {
-        
-        if (leaveRequestService.isLeaveRequestOverlapping(employeeId, 
+
+        if (leaveRequestService.isLeaveRequestOverlapping(employeeId,
                 LocalDate.parse(startDate), LocalDate.parse(endDate))) {
             return ResponseEntity.badRequest().body(null);
         }
-        
+
         LeaveRequest createdRequest = leaveRequestService.createLeaveRequest(
-                employeeId, 
-                LocalDate.parse(startDate), 
-                LocalDate.parse(endDate), 
+                employeeId,
+                LocalDate.parse(startDate),
+                LocalDate.parse(endDate),
                 description);
-        
+
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}")
                 .buildAndExpand(createdRequest.getId())
                 .toUri();
-        
+
         return ResponseEntity.created(location).body(createdRequest);
     }
 
@@ -72,7 +71,7 @@ public class LeaveRequestController {
 
     @PutMapping("/{id}/status")
     public ResponseEntity<LeaveRequest> updateLeaveRequestStatus(
-            @PathVariable Long id, 
+            @PathVariable Long id,
             @RequestParam LeaveStatus status) {
         return ResponseEntity.ok(leaveRequestService.updateLeaveRequestStatus(id, status));
     }
@@ -81,5 +80,11 @@ public class LeaveRequestController {
     public ResponseEntity<Void> deleteLeaveRequest(@PathVariable Long id) {
         leaveRequestService.deleteLeaveRequest(id);
         return ResponseEntity.noContent().build();
+    }
+
+    // New endpoint to get leave requests by manager
+    @GetMapping("/manager/{managerId}")
+    public ResponseEntity<List<LeaveRequest>> getLeaveRequestsByManager(@PathVariable Long managerId) {
+        return ResponseEntity.ok(leaveRequestService.getLeaveRequestsByManagerId(managerId));
     }
 }

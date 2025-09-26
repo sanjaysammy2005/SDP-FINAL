@@ -48,6 +48,16 @@ public class AttendanceController {
         return ResponseEntity.created(location).body(attendance);
     }
 
+    // New endpoint for Daily View
+    @GetMapping("/employee/{employeeId}/date")
+    public ResponseEntity<Attendance> getAttendanceByEmployeeAndDate(
+            @PathVariable Long employeeId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return attendanceService.getAttendanceByEmployeeAndDate(employeeId, date)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
     @GetMapping
     public ResponseEntity<List<Attendance>> getAllAttendanceRecords() {
         return ResponseEntity.ok(attendanceService.getAllAttendanceRecords());

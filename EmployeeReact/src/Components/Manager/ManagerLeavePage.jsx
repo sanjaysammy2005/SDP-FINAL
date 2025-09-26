@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Container, 
-  Row, 
-  Col, 
-  Card, 
-  Table, 
-  Alert, 
-  ButtonGroup, 
-  Button, 
+import {
+  Container,
+  Row,
+  Col,
+  Card,
+  Table,
+  Alert,
+  ButtonGroup,
+  Button,
   Badge,
   Nav,
   Spinner
@@ -19,35 +19,22 @@ import './ManagerDashboard.css';
 
 const ManagerLeavePage = () => {
   const [leaveRequests, setLeaveRequests] = useState([]);
-  const [employees, setEmployees] = useState([]);
   const [filter, setFilter] = useState('PENDING');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(true);
-  
+
   const navigate = useNavigate();
   const location = useLocation();
   const managerId = localStorage.getItem("managerId");
   const managerName = localStorage.getItem("userName") || "Manager";
-  
-  // Use environment variable for the base API URL
+
   const baseUrl = import.meta.env.VITE_API_URL;
 
   const getLinkClass = (path) =>
     `text-white hover-bg-primary-dark rounded ${
       location.pathname === path ? "active bg-primary-dark" : ""
     }`;
-
-  const fetchEmployees = async () => {
-      try {
-          const res = await axios.get(`${baseUrl}/api/employees/byManager/${managerId}`);
-          setEmployees(res.data);
-          return res.data;
-      } catch (err) {
-          console.error("Error fetching employees for manager:", err);
-          return [];
-      }
-  };
 
   const fetchLeaveRequests = async () => {
     try {
@@ -59,30 +46,19 @@ const ManagerLeavePage = () => {
       setLoading(true);
       setError('');
       setSuccess('');
-      
-      const allEmployees = await fetchEmployees(); // Fetch employees first to filter later
-      const employeeIds = allEmployees.map(emp => emp.id);
 
-      const url = filter === 'ALL' 
-        ? `${baseUrl}/api/leave-requests` 
-        : `${baseUrl}/api/leave-requests/status/${filter}`;
+      const url = `${baseUrl}/api/leave-requests/manager/${managerId}`;
       
       const response = await axios.get(url);
       
-      const allLeaveRequests = Array.isArray(response.data) ? response.data : [];
+      let leaveRequests = Array.isArray(response.data) ? response.data : [];
+
+      // Filter by status if a filter is selected
+      if (filter !== 'ALL') {
+        leaveRequests = leaveRequests.filter(req => req.status === filter);
+      }
       
-      // Filter leave requests to only show those from the current manager's team
-      const filteredLeaveRequests = allLeaveRequests.filter(req => 
-        employeeIds.includes(req.employee.id)
-      );
-
-      // Add employee name to each request for display purposes
-      const leaveRequestsWithNames = filteredLeaveRequests.map(req => {
-          const employee = allEmployees.find(emp => emp.id === req.employee.id);
-          return { ...req, employeeName: employee ? employee.name : `Employee #${req.employee.id}` };
-      });
-
-      setLeaveRequests(leaveRequestsWithNames);
+      setLeaveRequests(leaveRequests);
 
     } catch (err) {
       console.error("Error fetching leave requests:", err);
@@ -102,7 +78,6 @@ const ManagerLeavePage = () => {
     setSuccess('');
 
     try {
-      // Use the base URL for the API endpoint
       await axios.put(`${baseUrl}/api/leave-requests/${id}/status?status=${status}`);
       setSuccess(`Leave request ${status.toLowerCase()} successfully!`);
       fetchLeaveRequests(); // Refresh the list
@@ -284,7 +259,7 @@ const ManagerLeavePage = () => {
                                     </span>
                                   </div>
                                   <div>
-                                    <div className="fw-medium">{request.employeeName || `Employee #${request.employee.id}`}</div>
+                                    <div className="fw-medium">{request.employeeName || `Employee #${request.employeeId}`}</div>
                                   </div>
                                 </div>
                               </td>

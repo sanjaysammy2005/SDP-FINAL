@@ -30,7 +30,6 @@ public class AttendanceService {
         Employee employee = employeeRepository.findById(employeeId)
                 .orElseThrow(() -> new RuntimeException("Employee not found with id: " + employeeId));
         
-        // Check if attendance already exists for this employee and date
         Optional<Attendance> existingAttendance = attendanceRepository
                 .findByEmployee_IdAndDate(employeeId, date);
         
@@ -45,6 +44,12 @@ public class AttendanceService {
             attendance.setStatus(status);
             return attendanceRepository.save(attendance);
         }
+    }
+
+    // New method to find attendance for one employee on a specific date
+    @Transactional(readOnly = true)
+    public Optional<Attendance> getAttendanceByEmployeeAndDate(Long employeeId, LocalDate date) {
+        return attendanceRepository.findByEmployee_IdAndDate(employeeId, date);
     }
 
     @Transactional(readOnly = true)
@@ -79,12 +84,11 @@ public class AttendanceService {
         return attendanceRepository.findByEmployee_IdAndDateBetween(employeeId, startDate, endDate);
     }
 
-    
-
     @Transactional
     public void deleteAttendanceRecord(Long id) {
         attendanceRepository.deleteById(id);
     }
+
     @Transactional(readOnly = true)
 	public List<Attendance> getAttendanceByEmployeeAndMonth(Long employeeId, int year, int month) {
 		LocalDate startDate = LocalDate.of(year, month, 1);
