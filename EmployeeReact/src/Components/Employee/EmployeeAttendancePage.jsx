@@ -21,6 +21,7 @@ const EmployeeAttendancePage = () => {
   const employeeName = localStorage.getItem('userName') || 'Employee';
 
   // Fetch attendance data
+  //trying to rebuild image wihtout previous cache
   useEffect(() => {
     if (!employeeId) {
       navigate("/login");
