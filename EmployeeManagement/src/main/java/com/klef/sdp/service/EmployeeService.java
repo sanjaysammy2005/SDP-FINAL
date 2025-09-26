@@ -21,7 +21,8 @@ public class EmployeeService {
     private EmployeeRepo repo;
 	@Autowired
 	private ManagerRepo mrepo;
-	@Autowired
+	
+    //@Autowired
     //private EmailService emailService;
     public void addEmployee(Employee employee) {
         repo.save(employee);
