@@ -1,0 +1,22 @@
+spring.application.name=EmployeeManagement
+
+server.port=8080
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+spring.datasource.url=jdbc:mysql://mysqldb:3306/ems
+spring.datasource.username=root
+spring.datasource.password=root
+
+spring.jpa.hibernate.ddl-auto=update
+
+spring.mail.host=smtp.gmail.com
+spring.mail.port=587
+spring.mail.username=yashodhanreddy126@gmail.com
+spring.mail.password=pbuh jzxi yehm vfku
+spring.mail.properties.mail.smtp.auth=true
+spring.mail.properties.mail.smtp.starttls.enable=true
+
+
+# Allow CORS for all origins (for development)
+spring.web.cors.allowed-origins=*
+spring.web.cors.allowed-methods=*
+spring.web.cors.allowed-headers=*
