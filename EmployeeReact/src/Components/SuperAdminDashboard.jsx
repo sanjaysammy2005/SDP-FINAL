@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Container, Row, Col, Card, Table, Button, Modal, Form, Spinner, Alert, Nav } from "react-bootstrap";
-import { useNavigate, Link } from "react-router-dom";
+import { Container, Row, Col, Table, Button, Modal, Form, Spinner, Alert } from "react-bootstrap";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import './Manager/ManagerDashboard.css';
@@ -10,15 +10,11 @@ const SuperAdminDashboard = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [showModal, setShowModal] = useState(false);
-    const [modalMode, setModalMode] = useState("add"); // "add" or "edit"
-    const [formData, setFormData] = useState({
-        id: null,
-        name: "",
-        org: "",
-        email: "",
-        password: "",
-    });
+    const [modalMode, setModalMode] = useState("add"); 
+    const [formData, setFormData] = useState({ id: null, name: "", org: "", email: "", password: "" });
+    
     const navigate = useNavigate();
+    const location = useLocation();
     const baseUrl = `${import.meta.env.VITE_API_URL}`;
 
     const fetchManagers = async () => {
@@ -28,239 +24,134 @@ const SuperAdminDashboard = () => {
             setManagers(response.data);
             setLoading(false);
         } catch (err) {
-            console.error("Error fetching managers:", err);
-            setError("Failed to fetch managers. Please try again.");
+            setError("Failed to fetch managers.");
             setLoading(false);
         }
     };
 
-    useEffect(() => {
-        fetchManagers();
-    }, []);
-
-    const handleAddManager = () => {
-        setModalMode("add");
-        setFormData({ id: null, name: "", org: "", email: "", password: "" });
-        setShowModal(true);
-    };
-
-    const handleEditManager = (manager) => {
-        setModalMode("edit");
-        setFormData({
-            id: manager.id,
-            name: manager.name,
-            org: manager.org,
-            email: manager.email,
-            password: "", // Do not pre-fill password for security
-        });
-        setShowModal(true);
-    };
-
-    const handleDeleteManager = async (id) => {
-        if (window.confirm("Are you sure you want to delete this manager?")) {
-            try {
-                await axios.delete(`${baseUrl}/managers/delete/${id}`);
-                fetchManagers();
-            } catch (err) {
-                console.error("Error deleting manager:", err);
-                alert("Failed to delete manager.");
-            }
-        }
-    };
+    useEffect(() => { fetchManagers(); }, []);
 
     const handleFormSubmit = async (e) => {
         e.preventDefault();
-        setError(null);
         try {
-            if (modalMode === "add") {
-                await axios.post(`${baseUrl}/manager/addManager`, {
-                    name: formData.name,
-                    org: formData.org,
-                    email: formData.email,
-                    password: formData.password,
-                });
-            } else {
-                await axios.put(`${baseUrl}/manager/update/${formData.id}`, {
-                    name: formData.name,
-                    org: formData.org,
-                    email: formData.email,
-                    password: formData.password,
-                });
-            }
+            if (modalMode === "add") await axios.post(`${baseUrl}/manager/addManager`, formData);
+            else await axios.put(`${baseUrl}/manager/update/${formData.id}`, formData);
             setShowModal(false);
             fetchManagers();
         } catch (err) {
-            console.error("Error submitting form:", err);
-            setError(err.response?.data || "An unexpected error occurred.");
+            setError(err.response?.data || "Error occurred.");
         }
     };
 
-    const handleLogout = () => {
-        localStorage.clear();
-        navigate("/login");
+    const handleDelete = async (id) => {
+        if(window.confirm("Delete this manager?")) {
+            await axios.delete(`${baseUrl}/managers/delete/${id}`);
+            fetchManagers();
+        }
     };
 
+    // Navigation Dock Component (Internal for simplicity as per request context)
+    const AdminDock = () => (
+        <div className="brave-dock-container">
+            <div className="brave-dock">
+                <Link to="/superadmindashboard" className={`dock-item ${location.pathname === '/superadmindashboard' ? 'active' : ''}`} data-label="Managers">
+                    <i className="bi bi-person-gear"></i>
+                </Link>
+                <Link to="/superadmin/employees" className={`dock-item ${location.pathname === '/superadmin/employees' ? 'active' : ''}`} data-label="Employees">
+                    <i className="bi bi-people"></i>
+                </Link>
+                <Link to="/superadmin/announcements" className={`dock-item ${location.pathname === '/superadmin/announcements' ? 'active' : ''}`} data-label="Announcements">
+                    <i className="bi bi-megaphone"></i>
+                </Link>
+                <div className="dock-separator"></div>
+                <div className="dock-item text-danger" onClick={() => { localStorage.clear(); navigate("/login"); }} style={{cursor:'pointer'}} data-label="Logout">
+                    <i className="bi bi-box-arrow-right"></i>
+                </div>
+            </div>
+        </div>
+    );
+
     return (
-        <Container fluid className="dashboard-container">
-            <Row className="g-0">
-                {/* Sidebar */}
-                <Col md={2} className="sidebar bg-primary text-white vh-100 sticky-top">
-                    <div className="sidebar-header p-4 text-center">
-                        <h4 className="text-white">Admin Portal</h4>
+        <div className="dashboard-container">
+            <Container className="main-content">
+                <div className="d-flex justify-content-between align-items-center mb-5">
+                    <div>
+                        <h1 className="fw-bold mb-1">Manager Overview</h1>
+                        <p className="text-muted">Manage system access and organizations.</p>
                     </div>
-                    <Nav className="flex-column p-3">
-                        <Nav.Item className="mb-2">
-                            <Nav.Link as={Link} to="/superadmindashboard" className="text-white active bg-primary-dark rounded">
-                                <i className="bi bi-person-gear me-2"></i>Manager Management
-                            </Nav.Link>
-                        </Nav.Item>
-                        <Nav.Item className="mb-2">
-                            <Nav.Link as={Link} to="/superadmin/employees" className="text-white hover-bg-primary-dark rounded">
-                                <i className="bi bi-people-fill me-2"></i>Employee Management
-                            </Nav.Link>
-                        </Nav.Item>
-                        {/* New Nav.Item for Announcements */}
-                        <Nav.Item className="mb-2">
-                            <Nav.Link as={Link} to="/superadmin/announcements" className="text-white hover-bg-primary-dark rounded">
-                                <i className="bi bi-megaphone me-2"></i>Announcements
-                            </Nav.Link>
-                        </Nav.Item>
-                        <Nav.Item className="mt-4">
-                            <Button
-                                variant="outline-light"
-                                size="sm"
-                                className="w-100"
-                                onClick={handleLogout}
-                            >
-                                <i className="bi bi-box-arrow-left me-2"></i>Logout
-                            </Button>
-                        </Nav.Item>
-                    </Nav>
-                </Col>
+                    <Button className="btn-brave" onClick={() => { setModalMode("add"); setFormData({ id: null, name: "", org: "", email: "", password: "" }); setShowModal(true); }}>
+                        <i className="bi bi-plus-lg me-2"></i>New Manager
+                    </Button>
+                </div>
 
-                {/* Main Content Area */}
-                <Col md={10} className="main-content p-4">
-                    <div className="d-flex justify-content-between align-items-center mb-4">
-                        <h2 className="text-primary fw-bold">Manager Management</h2>
-                        <Button variant="primary" onClick={handleAddManager}>
-                            Add New Manager
-                        </Button>
-                    </div>
+                {error && <Alert variant="danger" className="rounded-3 border-0 shadow-sm">{error}</Alert>}
 
-                    {error && <Alert variant="danger">{error}</Alert>}
+                <div className="card-brave">
+                    {loading ? (
+                        <div className="text-center py-5"><Spinner animation="border" variant="danger" /></div>
+                    ) : (
+                        <Table hover responsive className="table-brave mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Organization</th>
+                                    <th>Email</th>
+                                    <th className="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {managers.map((manager) => (
+                                    <tr key={manager.id}>
+                                        <td className="fw-bold">{manager.name}</td>
+                                        <td><span className="badge bg-light text-dark border px-3 py-2 rounded-pill">{manager.org}</span></td>
+                                        <td className="text-muted">{manager.email}</td>
+                                        <td className="text-end">
+                                            <Button variant="link" className="text-primary p-0 me-3" onClick={() => { setModalMode("edit"); setFormData(manager); setShowModal(true); }}>
+                                                <i className="bi bi-pencil-fill"></i>
+                                            </Button>
+                                            <Button variant="link" className="text-danger p-0" onClick={() => handleDelete(manager.id)}>
+                                                <i className="bi bi-trash-fill"></i>
+                                            </Button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </Table>
+                    )}
+                </div>
+            </Container>
 
-                    <Card className="shadow-sm">
-                        <Card.Body>
-                            {loading ? (
-                                <div className="text-center py-5">
-                                    <Spinner animation="border" role="status" variant="primary" />
-                                </div>
-                            ) : (
-                                <Table striped bordered hover responsive className="mb-0">
-                                    <thead>
-                                        <tr>
-                                            <th>ID</th>
-                                            <th>Name</th>
-                                            <th>Organization</th>
-                                            <th>Email</th>
-                                            <th>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {managers.map((manager) => (
-                                            <tr key={manager.id}>
-                                                <td>{manager.id}</td>
-                                                <td>{manager.name}</td>
-                                                <td>{manager.org}</td>
-                                                <td>{manager.email}</td>
-                                                <td>
-                                                    <Button
-                                                        variant="warning"
-                                                        size="sm"
-                                                        className="me-2"
-                                                        onClick={() => handleEditManager(manager)}
-                                                    >
-                                                        Edit
-                                                    </Button>
-                                                    <Button
-                                                        variant="danger"
-                                                        size="sm"
-                                                        onClick={() => handleDeleteManager(manager.id)}
-                                                    >
-                                                        Delete
-                                                    </Button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </Table>
-                            )}
-                        </Card.Body>
-                    </Card>
+            <Modal show={showModal} onHide={() => setShowModal(false)} centered contentClassName="border-0 rounded-4 shadow">
+                <Modal.Header closeButton className="border-bottom-0 pb-0">
+                    <Modal.Title className="fw-bold">{modalMode === "add" ? "Add Manager" : "Edit Manager"}</Modal.Title>
+                </Modal.Header>
+                <Modal.Body className="p-4">
+                    <Form onSubmit={handleFormSubmit}>
+                        <Form.Group className="mb-3">
+                            <Form.Label className="small fw-bold text-secondary">FULL NAME</Form.Label>
+                            <Form.Control className="rounded-3 p-3 bg-light border-0" type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
+                        </Form.Group>
+                        <Form.Group className="mb-3">
+                            <Form.Label className="small fw-bold text-secondary">ORGANIZATION</Form.Label>
+                            <Form.Control className="rounded-3 p-3 bg-light border-0" type="text" value={formData.org} onChange={(e) => setFormData({ ...formData, org: e.target.value })} required />
+                        </Form.Group>
+                        <Form.Group className="mb-3">
+                            <Form.Label className="small fw-bold text-secondary">EMAIL</Form.Label>
+                            <Form.Control className="rounded-3 p-3 bg-light border-0" type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} required />
+                        </Form.Group>
+                        {modalMode === "add" && (
+                            <Form.Group className="mb-4">
+                                <Form.Label className="small fw-bold text-secondary">PASSWORD</Form.Label>
+                                <Form.Control className="rounded-3 p-3 bg-light border-0" type="password" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} required />
+                            </Form.Group>
+                        )}
+                        <Button type="submit" className="btn-brave w-100 py-3">Save Changes</Button>
+                    </Form>
+                </Modal.Body>
+            </Modal>
 
-                    {/* Add/Edit Manager Modal */}
-                    <Modal show={showModal} onHide={() => setShowModal(false)}>
-                        <Modal.Header closeButton>
-                            <Modal.Title>{modalMode === "add" ? "Add Manager" : "Edit Manager"}</Modal.Title>
-                        </Modal.Header>
-                        <Form onSubmit={handleFormSubmit}>
-                            <Modal.Body>
-                                <Form.Group className="mb-3">
-                                    <Form.Label>Full Name</Form.Label>
-                                    <Form.Control
-                                        type="text"
-                                        name="name"
-                                        value={formData.name}
-                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                        required
-                                    />
-                                </Form.Group>
-                                <Form.Group className="mb-3">
-                                    <Form.Label>Organization</Form.Label>
-                                    <Form.Control
-                                        type="text"
-                                        name="org"
-                                        value={formData.org}
-                                        onChange={(e) => setFormData({ ...formData, org: e.target.value })}
-                                        required
-                                    />
-                                </Form.Group>
-                                <Form.Group className="mb-3">
-                                    <Form.Label>Email</Form.Label>
-                                    <Form.Control
-                                        type="email"
-                                        name="email"
-                                        value={formData.email}
-                                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                        required
-                                    />
-                                </Form.Group>
-                                {modalMode === "add" && (
-                                    <Form.Group className="mb-3">
-                                        <Form.Label>Password</Form.Label>
-                                        <Form.Control
-                                            type="password"
-                                            name="password"
-                                            value={formData.password}
-                                            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                            required
-                                        />
-                                    </Form.Group>
-                                )}
-                            </Modal.Body>
-                            <Modal.Footer>
-                                <Button variant="secondary" onClick={() => setShowModal(false)}>
-                                    Close
-                                </Button>
-                                <Button variant="primary" type="submit">
-                                    {modalMode === "add" ? "Add Manager" : "Save Changes"}
-                                </Button>
-                            </Modal.Footer>
-                        </Form>
-                    </Modal>
-                </Col>
-            </Row>
-        </Container>
+            <AdminDock />
+        </div>
     );
 };
 

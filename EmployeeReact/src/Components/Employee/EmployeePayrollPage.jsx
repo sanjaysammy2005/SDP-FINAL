@@ -1,237 +1,141 @@
-import { useState, useEffect } from 'react';
-import { Container, Card, Table, Alert, Spinner, Button, Row, Col, Form, Nav } from 'react-bootstrap';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Container, Row, Col, Spinner, Alert, Button, Form, Table } from 'react-bootstrap';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import './EmployeeDashboard.css'; // Import the new CSS file
-
-const baseUrl = `${import.meta.env.VITE_API_URL}`;
+import './EmployeeDashboard.css';
 
 const EmployeePayrollPage = () => {
-    const [payrollData, setPayrollData] = useState(null);
-    const [selectedMonth, setSelectedMonth] = useState(new Date());
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
-    const [employeeId, setEmployeeId] = useState(null);
-    const navigate = useNavigate();
-    const employeeName = localStorage.getItem('userName') || 'Employee';
+  const [data, setData] = useState(null);
+  const [selectedMonth, setSelectedMonth] = useState(new Date());
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const employeeId = localStorage.getItem('employeeId');
+  const employeeName = localStorage.getItem('userName');
+  const baseUrl = `${import.meta.env.VITE_API_URL}`;
 
-    // Get employee ID from localStorage
-    useEffect(() => {
-        const storedEmployeeId = localStorage.getItem('employeeId');
-        if (!storedEmployeeId) {
-            navigate('/login');
-            return;
-        }
-        setEmployeeId(storedEmployeeId);
-    }, [navigate]);
+  useEffect(() => {
+    if (!employeeId) { navigate("/login"); return; }
+    fetchPayroll();
+  }, [employeeId, selectedMonth]);
 
-    // Fetch payroll data from the new backend API
-    useEffect(() => {
-        if (!employeeId) return;
+  const fetchPayroll = async () => {
+    setLoading(true);
+    try {
+      const year = selectedMonth.getFullYear();
+      const month = selectedMonth.getMonth() + 1;
+      const res = await axios.get(`${baseUrl}/api/payroll/employee/${employeeId}/month?year=${year}&month=${month}`);
+      setData(res.data);
+    } catch (err) { console.error(err); } 
+    finally { setLoading(false); }
+  };
 
-        const fetchPayrollData = async () => {
-            setLoading(true);
-            setError('');
-            try {
-                const year = selectedMonth.getFullYear();
-                const month = selectedMonth.getMonth() + 1;
-                
-                const response = await axios.get(`${baseUrl}/api/payroll/employee/${employeeId}/month?year=${year}&month=${month}`);
-                
-                setPayrollData(response.data);
-            } catch (err) {
-                console.error("Error fetching payroll data:", err);
-                setError(err.response?.data?.message || 'Failed to fetch payroll data');
-            } finally {
-                setLoading(false);
-            }
-        };
-        
-        fetchPayrollData();
-    }, [employeeId, selectedMonth]);
+  const EmployeeDock = () => (
+    <div className="brave-dock-container">
+      <div className="brave-dock">
+        <Link to="/employeedashboard" className={`dock-item ${location.pathname === '/employeedashboard' ? 'active' : ''}`} data-label="Dashboard">
+          <i className="bi bi-speedometer2"></i>
+        </Link>
+        <Link to="/leave" className={`dock-item ${location.pathname === '/leave' ? 'active' : ''}`} data-label="Leave">
+          <i className="bi bi-calendar-event"></i>
+        </Link>
+        <Link to="/attendance" className={`dock-item ${location.pathname === '/attendance' ? 'active' : ''}`} data-label="Attendance">
+          <i className="bi bi-clock-history"></i>
+        </Link>
+        <Link to="/tasks" className={`dock-item ${location.pathname === '/tasks' ? 'active' : ''}`} data-label="Tasks">
+          <i className="bi bi-list-task"></i>
+        </Link>
+        <Link to="/payroll" className={`dock-item ${location.pathname === '/payroll' ? 'active' : ''}`} data-label="Payroll">
+          <i className="bi bi-cash-stack"></i>
+        </Link>
+        <Link to="/profile" className={`dock-item ${location.pathname === '/profile' ? 'active' : ''}`} data-label="Profile">
+          <i className="bi bi-person"></i>
+        </Link>
+        <div className="dock-separator"></div>
+        <div className="dock-item text-danger" onClick={() => { localStorage.clear(); navigate('/login'); }} style={{cursor:'pointer'}} data-label="Logout">
+          <i className="bi bi-box-arrow-right"></i>
+        </div>
+      </div>
+    </div>
+  );
 
-    const handleLogout = () => {
-        localStorage.clear();
-        navigate('/login');
-    };
+  return (
+    <div className="dashboard-container">
+      <Container className="main-content">
+        <Row className="align-items-center mb-5">
+          <Col>
+            <h1 className="fw-bold mb-1">Payroll</h1>
+            <p className="text-muted">View your salary slip and breakdown.</p>
+          </Col>
+          <Col md="auto">
+            <div className="bg-white p-2 rounded-pill shadow-sm border d-flex align-items-center">
+              <span className="text-muted small fw-bold px-3">PERIOD</span>
+              <DatePicker 
+                selected={selectedMonth} 
+                onChange={(date) => setSelectedMonth(date)} 
+                dateFormat="MMMM yyyy"
+                showMonthYearPicker
+                className="border-0 bg-transparent fw-bold text-primary"
+              />
+            </div>
+          </Col>
+        </Row>
 
-    const handlePrintPayslip = () => {
-        window.print();
-    };
+        {loading ? <div className="text-center py-5"><Spinner animation="border" variant="danger"/></div> : data ? (
+          <div className="card-brave p-5">
+            <div className="d-flex justify-content-between border-bottom pb-4 mb-4">
+              <div>
+                <h4 className="fw-bold text-dark">Payslip</h4>
+                <p className="text-muted mb-0">{data.month}</p>
+              </div>
+              <div className="text-end">
+                <h5 className="fw-bold mb-0">{employeeName}</h5>
+                <small className="text-muted">ID: {employeeId}</small>
+              </div>
+            </div>
 
-    return (
-        <Container fluid className="dashboard-container px-0">
-            {/* Sidebar and Main Content Layout */}
-            <Row className="g-0">
-                {/* Sidebar - Now with proper styling and logout placement */}
-                <Col md={2} className="sidebar vh-100 sticky-top">
-                    <div className="sidebar-header p-3 text-center">
-                        <h4>EMPLOYEE Portal</h4>
-                        <div className="employee-info mt-3">
-                            <div className="avatar bg-primary rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2" 
-                                style={{ width: '60px', height: '60px' }}>
-                                <span className="fs-4">{employeeName.charAt(0)}</span>
-                            </div>
-                            <h6 className="mb-0">{employeeName}</h6>
-                            <small className="text-muted">Employee</small>
-                        </div>
-                    </div>
-                    <Nav className="flex-column p-3">
-                        <Nav.Item>
-                            <Nav.Link as={Link} to="/employeedashboard" className="text-white">
-                                <i className="bi bi-speedometer2 me-2"></i>Dashboard
-                            </Nav.Link>
-                        </Nav.Item>
-                        <Nav.Item>
-                            <Nav.Link as={Link} to="/leave" className="text-white">
-                                <i className="bi bi-calendar-event me-2"></i>Leave Management
-                            </Nav.Link>
-                        </Nav.Item>
-                        <Nav.Item>
-                            <Nav.Link as={Link} to="/attendance" className="text-white">
-                                <i className="bi bi-clock-history me-2"></i>Attendance
-                            </Nav.Link>
-                        </Nav.Item>
-                        <Nav.Item>
-                            <Nav.Link as={Link} to="/payroll" className="text-white active">
-                                <i className="bi bi-cash-stack me-2"></i>Payroll
-                            </Nav.Link>
-                        </Nav.Item>
-                        <Nav.Item>
-                                      <Nav.Link as={Link} to="/tasks" className={getLinkClass("/tasks")}>
-                                        <i className="bi bi-list-task me-2"></i>My Tasks
-                                      </Nav.Link>
-                                    </Nav.Item>
-                        <Nav.Item>
-                            <Nav.Link as={Link} to="/profile" className="text-white">
-                                <i className="bi bi-person-lines-fill me-2"></i>Profile
-                            </Nav.Link>
-                        </Nav.Item>
-                        <Nav.Item>
-                            <Nav.Link as={Link} to="/documents" className="text-white">
-                                <i className="bi bi-file-earmark-text me-2"></i>Documents
-                            </Nav.Link>
-                        </Nav.Item>
-                    </Nav>
-                    <div className="logout-container">
-                        <Button 
-                            variant="outline-light" 
-                            size="sm" 
-                            className="w-100"
-                            onClick={handleLogout}
-                        >
-                            <i className="bi bi-box-arrow-left me-2"></i>Logout
-                        </Button>
-                    </div>
-                </Col>
-
-                {/* Main Content Area */}
-                <Col md={10} className="main-content p-4">
-                    <h2 className="mb-4">My Payroll</h2>
-                    
-                    {error && <Alert variant="danger">{error}</Alert>}
-
-                    <div className="mb-4">
-                        <Form.Group>
-                            <Form.Label>Select Month</Form.Label>
-                            <DatePicker
-                                selected={selectedMonth}
-                                onChange={(date) => setSelectedMonth(date)}
-                                className="form-control"
-                                dateFormat="MMMM yyyy"
-                                showMonthYearPicker
-                            />
-                        </Form.Group>
-                    </div>
-
-                    {loading ? (
-                        <div className="text-center py-4">
-                            <Spinner animation="border" role="status">
-                                <span className="visually-hidden">Loading...</span>
-                            </Spinner>
-                        </div>
-                    ) : payrollData ? (
-                        <Card className="mb-4 printable-area">
-                            <Card.Header className="d-flex justify-content-between align-items-center">
-                                <h5>Payroll for {payrollData.month}</h5>
-                                <Button variant="primary" onClick={handlePrintPayslip}>
-                                    <i className="bi bi-printer me-2"></i>Print Payslip
-                                </Button>
-                            </Card.Header>
-                            <Card.Body>
-                                <Row>
-                                    <Col md={6}>
-                                        <h6 className="mb-3">Employee Information</h6>
-                                        <Table borderless>
-                                            <tbody>
-                                                <tr>
-                                                    <th>Name:</th>
-                                                    <td>{employeeName}</td>
-                                                </tr>
-                                                <tr>
-                                                    <th>Employee ID:</th>
-                                                    <td>{employeeId}</td>
-                                                </tr>
-                                                <tr>
-                                                    <th>Pay Period:</th>
-                                                    <td>{payrollData.month}</td>
-                                                </tr>
-                                            </tbody>
-                                        </Table>
-                                        
-                                        <h6 className="mt-4 mb-3">Attendance Summary</h6>
-                                        <Table bordered>
-                                            <tbody>
-                                                <tr>
-                                                    <th>Present Days</th>
-                                                    <td>{payrollData.presentDays}</td>
-                                                </tr>
-                                                <tr>
-                                                    <th>Leave Days</th>
-                                                    <td>{payrollData.leaveDays}</td>
-                                                </tr>
-                                                <tr>
-                                                    <th>Absent Days</th>
-                                                    <td>{payrollData.absentDays}</td>
-                                                </tr>
-                                                <tr>
-                                                    <th>Daily Wage</th>
-                                                    <td>₹{payrollData.dailyWage.toFixed(2)}</td>
-                                                </tr>
-                                            </tbody>
-                                        </Table>
-                                    </Col>
-                                    <Col md={6}>
-                                        <h6 className="mb-3">Salary Breakdown</h6>
-                                        <Table bordered>
-                                            <tbody>
-                                                <tr>
-                                                    <th>Basic Salary</th>
-                                                    <td>₹{payrollData.basicSalary.toFixed(2)}</td>
-                                                </tr>
-                                                <tr>
-                                                    <th>Total Deductions</th>
-                                                    <td>₹{payrollData.totalDeductions.toFixed(2)}</td>
-                                                </tr>
-                                                <tr className="table-primary">
-                                                    <th>Net Salary</th>
-                                                    <td>₹{payrollData.netSalary.toFixed(2)}</td>
-                                                </tr>
-                                            </tbody>
-                                        </Table>
-                                    </Col>
-                                </Row>
-                            </Card.Body>
-                        </Card>
-                    ) : (
-                        <Alert variant="info">No payroll data available for selected month</Alert>
-                    )}
-                </Col>
+            <Row className="g-5">
+              <Col md={6}>
+                <h6 className="text-uppercase text-secondary fw-bold small mb-3">Earnings</h6>
+                <Table borderless size="sm">
+                  <tbody>
+                    <tr><td className="text-muted">Daily Wage</td><td className="text-end fw-bold">₹{data.dailyWage}</td></tr>
+                    <tr><td className="text-muted">Present Days</td><td className="text-end fw-bold">{data.presentDays}</td></tr>
+                    <tr className="border-top"><td className="pt-3">Basic Salary</td><td className="text-end fw-bold pt-3">₹{data.basicSalary.toFixed(2)}</td></tr>
+                  </tbody>
+                </Table>
+              </Col>
+              <Col md={6}>
+                <h6 className="text-uppercase text-secondary fw-bold small mb-3">Deductions</h6>
+                <Table borderless size="sm">
+                  <tbody>
+                    <tr><td className="text-muted">Absent Days</td><td className="text-end fw-bold">{data.absentDays}</td></tr>
+                    <tr><td className="text-muted text-danger">Total Deductions</td><td className="text-end fw-bold text-danger">- ₹{data.totalDeductions.toFixed(2)}</td></tr>
+                  </tbody>
+                </Table>
+              </Col>
             </Row>
-        </Container>
-    );
+
+            <div className="bg-light p-4 rounded-3 mt-4 d-flex justify-content-between align-items-center">
+              <span className="fw-bold text-dark">NET SALARY</span>
+              <h3 className="fw-bold text-success mb-0">₹{data.netSalary.toFixed(2)}</h3>
+            </div>
+
+            <div className="text-center mt-5">
+              <Button variant="outline-dark" className="rounded-pill px-4" onClick={() => window.print()}>
+                <i className="bi bi-printer me-2"></i> Print Payslip
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <Alert variant="light" className="text-center text-muted">No payroll data available for this month.</Alert>
+        )}
+      </Container>
+      <EmployeeDock />
+    </div>
+  );
 };
 
 export default EmployeePayrollPage;

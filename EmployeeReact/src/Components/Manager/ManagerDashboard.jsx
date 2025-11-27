@@ -1,321 +1,182 @@
 import React, { useEffect, useState } from "react";
-import {
-  Container,
-  Row,
-  Col,
-  Card,
-  Table,
-  Spinner,
-  Nav,
-  Button,
-  Badge,
-} from "react-bootstrap";
+import { Container, Row, Col, Table, Spinner, Button, Badge, Alert, Modal } from "react-bootstrap";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
-import AddEmployee from "../Manager/AddEmployee";
-import "./ManagerDashboard.css";
+import AddEmployee from "./AddEmployee";
+import 'bootstrap-icons/font/bootstrap-icons.css';
+import './ManagerDashboard.css';
 
 const ManagerDashboard = () => {
   const [managerId, setManagerId] = useState(null);
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({
-    totalEmployees: 0,
-    pendingLeaves: 0,
-    recentLeaves: [],
-  });
+  const [stats, setStats] = useState({ total: 0, pendingLeaves: 0, active: 0 });
+  const [showAddModal, setShowAddModal] = useState(false);
+  
   const navigate = useNavigate();
   const location = useLocation();
   const managerName = localStorage.getItem("userName") || "Manager";
-  //const API_BASE_URL = 'http://localhost:8080';
-  //
   const baseUrl = `${import.meta.env.VITE_API_URL}`;
 
   useEffect(() => {
     const storedManagerId = localStorage.getItem("managerId");
     if (storedManagerId) {
       setManagerId(storedManagerId);
-      fetchEmployees(storedManagerId);
-      fetchDashboardStats(storedManagerId);
+      fetchData(storedManagerId);
     } else {
       navigate("/login");
     }
   }, [navigate]);
 
-  const fetchEmployees = async (id) => {
+  const fetchData = async (id) => {
     try {
-      const response = await axios.get(
-        `${baseUrl}/api/employees/byManager/${id}`
-      );
-      setEmployees(response.data);
-      setLoading(false);
-    } catch (error) {
-      console.error("Error fetching employees:", error);
-      setLoading(false);
-    }
-  };
-
-  const fetchDashboardStats = async (id) => {
-    try {
-      const [employeesRes, leavesRes] = await Promise.all([
-        axios.get(`${baseUrl}/api/employees/byManager/${id}`), // Correct endpoint
-        axios.get(`${baseUrl}/api/leave-requests/status/PENDING`),
+      setLoading(true);
+      const [empRes, leaveRes] = await Promise.all([
+        axios.get(`${baseUrl}/api/employees/byManager/${id}`),
+        axios.get(`${baseUrl}/api/leave-requests/status/PENDING`)
       ]);
 
-      const employeesInTeam = employeesRes.data.filter(emp => emp.manager.id == id);
-      const pendingLeavesForTeam = leavesRes.data.filter(leave => 
-        employeesInTeam.some(emp => emp.id === leave.employee.id)
-      );
-      
+      const team = empRes.data;
+      const teamIds = team.map(e => e.id);
+      const teamLeaves = leaveRes.data.filter(l => teamIds.includes(l.employeeId || l.employee?.id));
+
+      setEmployees(team);
       setStats({
-        totalEmployees: employeesInTeam.length,
-        pendingLeaves: pendingLeavesForTeam.length,
-        recentLeaves: pendingLeavesForTeam.slice(0, 3),
+        total: team.length,
+        active: team.filter(e => e.status === 'ACCEPTED').length,
+        pendingLeaves: teamLeaves.length
       });
     } catch (error) {
-      console.error("Error fetching stats:", error);
+      console.error("Error fetching dashboard data:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleLogout = () => {
-    localStorage.clear();
-    navigate("/login");
-  };
+  const ManagerDock = () => (
+    <div className="brave-dock-container">
+      <div className="brave-dock">
+        <Link to="/managerdashboard" className={`dock-item ${location.pathname === '/managerdashboard' ? 'active' : ''}`} data-label="Dashboard">
+          <i className="bi bi-speedometer2"></i>
+        </Link>
+        <Link to="/leave/approvals" className={`dock-item ${location.pathname === '/leave/approvals' ? 'active' : ''}`} data-label="Approvals">
+          <i className="bi bi-calendar-check"></i>
+          {stats.pendingLeaves > 0 && <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style={{fontSize: '0.6rem'}}>{stats.pendingLeaves}</span>}
+        </Link>
+        <Link to="/attendance/manage" className={`dock-item ${location.pathname === '/attendance/manage' ? 'active' : ''}`} data-label="Attendance">
+          <i className="bi bi-clock-history"></i>
+        </Link>
+        <Link to="/manager/tasks" className={`dock-item ${location.pathname === '/manager/tasks' ? 'active' : ''}`} data-label="Tasks">
+          <i className="bi bi-list-check"></i>
+        </Link>
+        <Link to="/managerprofile" className={`dock-item ${location.pathname === '/managerprofile' ? 'active' : ''}`} data-label="Profile">
+          <i className="bi bi-person"></i>
+        </Link>
+        <div className="dock-separator"></div>
+        <div className="dock-item text-danger" onClick={() => { localStorage.clear(); navigate("/login"); }} style={{cursor:'pointer'}} data-label="Logout">
+          <i className="bi bi-box-arrow-right"></i>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
-    <Container fluid className="dashboard-container">
-      <Row className="g-0">
-        {/* Sidebar */}
-        <Col md={2} className="sidebar bg-primary text-white vh-100 sticky-top">
-          <div className="sidebar-header p-4 text-center">
-            <h4 className="text-white">Manager Portal</h4>
-            <div className="employee-info mt-4">
-              <div 
-                className="avatar bg-white text-primary rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3"
-                style={{ width: "70px", height: "70px" }}
-              >
-                <span className="fs-3 fw-bold">{managerName.charAt(0)}</span>
+    <div className="dashboard-container">
+      <Container className="main-content">
+        {/* Header */}
+        <div className="d-flex justify-content-between align-items-end mb-5">
+          <div>
+            <h6 className="text-uppercase text-secondary fw-bold small mb-2">Manager Portal</h6>
+            <h1 className="fw-bold mb-0">Hello, {managerName}</h1>
+          </div>
+          <div className="text-end">
+            <p className="text-muted mb-0">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
+          </div>
+        </div>
+
+        {/* Stats Grid */}
+        <Row className="g-4 mb-5">
+          <Col md={4}>
+            <div className="card-brave p-4 d-flex align-items-center justify-content-between">
+              <div>
+                <h2 className="fw-bold mb-0 text-primary">{stats.total}</h2>
+                <p className="text-muted mb-0 small fw-bold">TOTAL MEMBERS</p>
               </div>
-              <h5 className="mb-0 text-white">{managerName}</h5>
-              <small className="text-white-50">Manager</small>
+              <div className="bg-light rounded-circle p-3 text-primary"><i className="bi bi-people fs-4"></i></div>
             </div>
-          </div>
-
-          <Nav className="flex-column p-3">
-            <Nav.Item className="mb-2">
-              <Nav.Link as={Link} to="/managerdashboard" className={`text-white hover-bg-primary-dark rounded ${location.pathname === '/managerdashboard' ? 'active bg-primary-dark' : ''}`}>
-                <i className="bi bi-speedometer2 me-2"></i>Dashboard
-              </Nav.Link>
-            </Nav.Item>
-            <Nav.Item className="mb-2">
-              <Nav.Link as={Link} to="/leave/approvals" className={`text-white hover-bg-primary-dark rounded ${location.pathname === '/leave/approvals' ? 'active bg-primary-dark' : ''}`}>
-                <i className="bi bi-calendar-event me-2"></i>Leave Approvals
-                {stats.pendingLeaves > 0 && (
-                  <Badge pill bg="danger" className="ms-2">
-                    {stats.pendingLeaves}
-                  </Badge>
-                )}
-              </Nav.Link>
-            </Nav.Item>
-            <Nav.Item className="mb-2">
-              <Nav.Link as={Link} to="/attendance/manage" className={`text-white hover-bg-primary-dark rounded ${location.pathname === '/attendance/manage' ? 'active bg-primary-dark' : ''}`}>
-                <i className="bi bi-clock-history me-2"></i>Attendance
-              </Nav.Link>
-            </Nav.Item>
-            {/* New Nav.Item for Task Management */}
-            <Nav.Item className="mb-2">
-              <Nav.Link as={Link} to="/manager/tasks" className={`text-white hover-bg-primary-dark rounded ${location.pathname === '/manager/tasks' ? 'active bg-primary-dark' : ''}`}>
-                <i className="bi bi-list-task me-2"></i>Task Management
-              </Nav.Link>
-            </Nav.Item>
-            <Nav.Item className="mb-2">
-              <Nav.Link as={Link} to="#" className="text-white hover-bg-primary-dark rounded">
-                <i className="bi bi-people-fill me-2"></i>Team Management
-              </Nav.Link>
-            </Nav.Item>
-            <Nav.Item className="mt-4">
-              <Button
-                variant="outline-light"
-                size="sm"
-                className="w-100"
-                onClick={handleLogout}
-              >
-                <i className="bi bi-box-arrow-left me-2"></i>Logout
-              </Button>
-            </Nav.Item>
-          </Nav>
-        </Col>
-
-        {/* Main Content Area */}
-        <Col md={10} className="main-content p-4">
-          {/* Top Navigation */}
-          <div className="d-flex justify-content-between align-items-center mb-4">
-            <h2 className="text-primary fw-bold">Welcome, {managerName}</h2>
-            <div className="d-flex align-items-center">
-              <Button variant="outline-primary" size="sm" className="me-2 notification-btn">
-                <i className="bi bi-bell-fill"></i>
-              </Button>
-              <Button variant="outline-primary" size="sm" className="me-3 notification-btn">
-                <i className="bi bi-envelope-fill"></i>
-              </Button>
-              <span className="text-muted date-display">
-                {new Date().toLocaleDateString("en-US", {
-                  weekday: "long",
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
-              </span>
+          </Col>
+          <Col md={4}>
+            <div className="card-brave p-4 d-flex align-items-center justify-content-between">
+              <div>
+                <h2 className="fw-bold mb-0 text-warning">{stats.pendingLeaves}</h2>
+                <p className="text-muted mb-0 small fw-bold">PENDING LEAVES</p>
+              </div>
+              <div className="bg-light rounded-circle p-3 text-warning"><i className="bi bi-calendar-event fs-4"></i></div>
             </div>
+          </Col>
+          <Col md={4}>
+            <div className="card-brave p-4 d-flex align-items-center justify-content-between">
+              <div>
+                <h2 className="fw-bold mb-0 text-success">{stats.active}</h2>
+                <p className="text-muted mb-0 small fw-bold">ACTIVE STATUS</p>
+              </div>
+              <div className="bg-light rounded-circle p-3 text-success"><i className="bi bi-check-circle fs-4"></i></div>
+            </div>
+          </Col>
+        </Row>
+
+        {/* Team Section */}
+        <div className="card-brave">
+          <div className="card-header-brave d-flex justify-content-between align-items-center">
+            <span>My Team</span>
+            <Button className="btn-brave" onClick={() => setShowAddModal(true)}>
+              <i className="bi bi-person-plus me-2"></i>Add Employee
+            </Button>
           </div>
+          <div className="p-0">
+            {loading ? (
+              <div className="text-center py-5"><Spinner animation="border" variant="danger"/></div>
+            ) : employees.length > 0 ? (
+              <Table hover responsive className="table-brave mb-0">
+                <thead>
+                  <tr>
+                    <th className="ps-4">Name</th>
+                    <th>Email</th>
+                    <th>Status</th>
+                    <th className="text-end pe-4">ID</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {employees.map(emp => (
+                    <tr key={emp.id}>
+                      <td className="ps-4 fw-bold">{emp.name}</td>
+                      <td className="text-muted">{emp.email}</td>
+                      <td>
+                        <Badge bg={emp.status === 'ACCEPTED' ? 'success' : 'secondary'} className="px-3 py-2 rounded-pill">
+                          {emp.status}
+                        </Badge>
+                      </td>
+                      <td className="text-end pe-4 text-muted">#{emp.id}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+            ) : (
+              <div className="text-center py-5 text-muted">No employees found. Start by adding one!</div>
+            )}
+          </div>
+        </div>
+      </Container>
 
-          {/* Stats Cards */}
-          <Row className="mb-4 g-3">
-            <Col md={4}>
-              <Card className="stat-card shadow-sm h-100">
-                <Card.Body className="d-flex align-items-center">
-                  <div className="icon-circle bg-blue-light me-3">
-                    <i className="bi bi-people-fill text-primary fs-4"></i>
-                  </div>
-                  <div>
-                    <h6 className="text-muted mb-1">Team Members</h6>
-                    <h3 className="text-primary mb-0">{stats.totalEmployees}</h3>
-                  </div>
-                </Card.Body>
-              </Card>
-            </Col>
-            <Col md={4}>
-              <Card className="stat-card shadow-sm h-100">
-                <Card.Body className="d-flex align-items-center">
-                  <div className="icon-circle bg-orange-light me-3">
-                    <i className="bi bi-calendar-x text-warning fs-4"></i>
-                  </div>
-                  <div>
-                    <h6 className="text-muted mb-1">Pending Leaves</h6>
-                    <h3 className="text-warning mb-0">{stats.pendingLeaves}</h3>
-                  </div>
-                </Card.Body>
-              </Card>
-            </Col>
-            <Col md={4}>
-              <Card className="stat-card shadow-sm h-100">
-                <Card.Body className="d-flex align-items-center">
-                  <div className="icon-circle bg-green-light me-3">
-                    <i className="bi bi-check-circle text-success fs-4"></i>
-                  </div>
-                  <div>
-                    <h6 className="text-muted mb-1">Active Members</h6>
-                    <h3 className="text-success mb-0">
-                      {employees.filter(e => e.status === "ACCEPTED").length}
-                    </h3>
-                  </div>
-                </Card.Body>
-              </Card>
-            </Col>
-          </Row>
+      {/* Add Employee Modal */}
+      <Modal show={showAddModal} onHide={() => setShowAddModal(false)} centered contentClassName="border-0 rounded-4 shadow">
+        <Modal.Body className="p-0">
+          <AddEmployee managerId={managerId} onSuccess={() => { setShowAddModal(false); fetchData(managerId); }} onCancel={() => setShowAddModal(false)} />
+        </Modal.Body>
+      </Modal>
 
-          {/* Main Content Sections */}
-          <Row className="g-3">
-            {/* Recent Leave Requests */}
-            <Col md={6}>
-              <Card className="shadow-sm h-100">
-                <Card.Header className="bg-white border-0 d-flex justify-content-between align-items-center">
-                  <h5 className="mb-0">Recent Leave Requests</h5>
-                  <Button 
-                    variant="outline-primary" 
-                    size="sm"
-                    as={Link} 
-                    to="/leave/approvals"
-                  >
-                    View All
-                  </Button>
-                </Card.Header>
-                <Card.Body>
-                  {stats.recentLeaves.length > 0 ? (
-                    <div className="table-responsive">
-                      <Table hover className="mb-0">
-                        <thead>
-                          <tr>
-                            <th>Employee</th>
-                            <th>Dates</th>
-                            <th>Status</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {stats.recentLeaves.map((leave) => (
-                            <tr key={leave.id}>
-                              <td>{leave.employee?.name || `Employee #${leave.employeeId}`}</td>
-                              <td>{new Date(leave.startDate).toLocaleDateString()} - {new Date(leave.endDate).toLocaleDateString()}</td>
-                              <td>
-                                <Badge bg="warning" className="text-white">Pending</Badge>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </Table>
-                    </div>
-                  ) : (
-                    <div className="text-center py-4">
-                      <i className="bi bi-calendar-x text-muted fs-1"></i>
-                      <p className="text-muted mt-2">No pending leave requests</p>
-                    </div>
-                  )}
-                </Card.Body>
-              </Card>
-            </Col>
-
-            {/* Team Members */}
-            <Col md={6}>
-              <Card className="shadow-sm h-100" style={{ height: "400px", width: "100%" }}>
-                <Card.Header className="bg-white border-0 d-flex justify-content-between align-items-center" style={{marginRight: "20px"}}>
-                  <h5 className="mb-0">Your Team</h5>
-                  <AddEmployee managerId={managerId} onEmployeeAdded={fetchEmployees} />
-                </Card.Header>
-                <Card.Body>
-                  {loading ? (
-                    <div className="text-center py-4">
-                      <Spinner animation="border" variant="primary" />
-                    </div>
-                  ) : employees.length > 0 ? (
-                    <div className="table-responsive" style={{ maxHeight: "300px", overflowY: "auto" }}>
-                      <Table hover className="mb-0">
-                        <thead>
-                          <tr>
-                            <th>ID</th>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Status</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {employees.map((employee) => (
-                            <tr key={employee.id}>
-                              <td>{employee.id}</td>
-                              <td>{employee.name}</td>
-                              <td>{employee.email}</td>
-                              <td>
-                                <Badge bg={employee.status === 'ACCEPTED' ? "success" : "secondary"}>
-                                  {employee.status === 'ACCEPTED' ? "Active" : "Inactive"}
-                                </Badge>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </Table>
-                    </div>
-                  ) : (
-                    <div className="text-center py-4">
-                      <i className="bi bi-people text-muted fs-1"></i>
-                      <p className="text-muted mt-2">No employees found</p>
-                    </div>
-                  )}
-                </Card.Body>
-              </Card>
-            </Col>
-          </Row>
-        </Col>
-      </Row>
-    </Container>
+      <ManagerDock />
+    </div>
   );
 };
 

@@ -1,124 +1,122 @@
-body{
-  font-family: Lexend;
-}
-.navbar {
-  background: transparent;
-  height: 80px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  position: absolute;
-  transition: background 0.3s ease-in-out, padding 0.3s ease-in-out;
-  top: 0;
-  width: 100%;
-  z-index: 10;
-}
-
-/* Sticky behavior for home page */
-.navbar.sticky {
+.brave-navbar {
   position: fixed;
   top: 0;
   left: 0;
-  background: rgba(255, 255, 255);
-  border-bottom-left-radius: 20px;
-  border-bottom-right-radius: 20px;
-  transition: background 0.3s ease-in-out, padding 0.3s ease-in-out;
-  
-  
-}
-
-/* Ensure navbar is always in place on non-home pages */
-.navbar.non-home {
-  position: sticky; /* Pushes content down */
-  background: rgba(255, 255, 255);
- 
-  border-bottom-left-radius: 20px;
-  border-bottom-right-radius: 20px;
-  box-shadow: 0 10px 8px rgba(150, 150, 150, 0.1);
-  
-}
-
-/* Adjust text color on sticky navbar */
-.navbar.sticky .nav-links,
-.navbar.sticky .navbar-logo {
-  color: black;
-}
-
-.navbar-container {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   width: 100%;
-  
-  padding: 0 20px;
-}
-
-.navbar-logo {
-  position: relative;
-  right: -30px;
-  color: white;
-  font-size: 1.5rem;
-  text-decoration: none;
-  padding-bottom: 20px;
-}
-
-.nav-menu {
-  display: flex;
-  list-style: none;
-  text-align: center;
-}
-
-.nav-item {
   height: 80px;
+  z-index: 1000;
+  background: transparent;
+  transition: all 0.3s ease;
 }
 
-.nav-links {
-  color: white;
+.brave-navbar.scrolled {
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+}
+
+.nav-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 40px;
+  height: 100%; /* Ensure it fills the navbar height */
   display: flex;
   align-items: center;
+  justify-content: space-between; /* This forces Logo to Left, Content to Right */
+}
+
+/* --- LOGO (Far Left) --- */
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   text-decoration: none;
-  padding: 0 1rem;
-  height: 70px;
-  margin-right: 15px;
-
+  color: var(--brave-dark);
+  font-weight: 800;
+  font-size: 1.8rem;
+  flex-shrink: 0; /* Prevents logo from being squished */
 }
 
-.nav-links:hover {
-  
-  background-color: rgba(255, 255, 255, 0.2);
-  border-radius: 4px;
+.brand-icon {
+  color: var(--brave-primary);
+  font-size: 2rem;
 }
 
-.navbar.sticky .nav-links {
-  color: black;
+.brand-dot {
+  color: var(--brave-primary);
 }
 
-.navbar.sticky .navbar-logo {
-  color: black;
+/* --- RIGHT SIDE CONTENT (Far Right) --- */
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 50px; /* Space between the "Links" section and "Buttons" section */
 }
 
-.login-button {
-  position: relative;
-  left: 55px;
-  background-color: #3390ec;
-  margin-right: 0;
-  width: 100px;
-  height: 50px;
+/* Links Group */
+.nav-links-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 30px; /* Space between individual links */
 }
 
-.signup-button {
-  position: relative;
-  right:33px;
-  background-color: #3390ec;
-  margin-left: 0;
-  width: 100px;
-  height: 50px;
+.nav-link {
+  text-decoration: none;
+  color: var(--brave-gray);
+  font-weight: 600;
+  font-size: 1rem;
+  transition: color 0.2s ease;
+  white-space: nowrap;
+  cursor: pointer;
 }
-.navbar.sticky .signup-button {
-  bottom: 9px;
-  border-color: #000; /* Change border color */
-  color: #000; /* Change text color */
+
+.nav-link:hover {
+  color: var(--brave-primary);
 }
-.navbar.sticky .login-button{
-  bottom: 9px;
+
+/* Buttons Group */
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.login-link {
+  text-decoration: none;
+  color: var(--brave-dark);
+  font-weight: 700;
+  font-size: 1rem;
+  white-space: nowrap;
+}
+
+.login-link:hover {
+  color: var(--brave-primary);
+}
+
+.signup-btn {
+  background: var(--brave-gradient);
+  border: none;
+  border-radius: var(--radius-full);
+  padding: 10px 28px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: white;
+  transition: transform 0.2s ease;
+  white-space: nowrap;
+}
+
+.signup-btn:hover {
+  transform: translateY(-2px);
+  background: var(--brave-gradient);
+  box-shadow: 0 4px 12px rgba(255, 32, 0, 0.3);
+  color: white;
+}
+
+/* Responsive Hide */
+@media (max-width: 992px) {
+  .nav-links-wrapper {
+    display: none;
+  }
+  .nav-container {
+    padding: 0 20px;
+  }
 }

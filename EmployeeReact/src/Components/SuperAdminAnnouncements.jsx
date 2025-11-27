@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from "react";
-import { Container, Row, Col, Card, Table, Button, Form, Spinner, Alert, Nav } from "react-bootstrap";
-import { Link, useNavigate } from "react-router-dom";
+import { Container, Row, Col, Card, Button, Form, Spinner, Alert } from "react-bootstrap";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import 'bootstrap-icons/font/bootstrap-icons.css';
-import './Manager/ManagerDashboard.css'; // Re-using styling for consistency
+import './Manager/ManagerDashboard.css';
 
 const SuperAdminAnnouncements = () => {
     const [announcements, setAnnouncements] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
     const [formData, setFormData] = useState({ title: "", content: "" });
     const navigate = useNavigate();
+    const location = useLocation();
     const baseUrl = `${import.meta.env.VITE_API_URL}`;
 
     const fetchAnnouncements = async () => {
@@ -18,144 +18,99 @@ const SuperAdminAnnouncements = () => {
             setLoading(true);
             const response = await axios.get(`${baseUrl}/api/announcements`);
             setAnnouncements(response.data);
-        } catch (err) {
-            console.error("Error fetching announcements:", err);
-            setError("Failed to fetch announcements. Please check the API server.");
-        } finally {
-            setLoading(false);
-        }
+        } catch (err) { console.error(err); } 
+        finally { setLoading(false); }
     };
 
-    useEffect(() => {
-        fetchAnnouncements();
-    }, []);
+    useEffect(() => { fetchAnnouncements(); }, []);
 
-    const handleFormSubmit = async (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        setError(null);
-        try {
-            await axios.post(`${baseUrl}/api/announcements/create`, formData);
-            fetchAnnouncements(); // Refresh the list
-            setFormData({ title: "", content: "" }); // Clear the form
-            alert("Announcement created successfully!");
-        } catch (err) {
-            console.error("Error submitting form:", err);
-            setError(err.response?.data || "An unexpected error occurred.");
-        }
+        await axios.post(`${baseUrl}/api/announcements/create`, formData);
+        fetchAnnouncements();
+        setFormData({ title: "", content: "" });
     };
 
-    const handleLogout = () => {
-        localStorage.clear();
-        navigate("/login");
-    };
+    const AdminDock = () => (
+        <div className="brave-dock-container">
+            <div className="brave-dock">
+                <Link to="/superadmindashboard" className={`dock-item ${location.pathname === '/superadmindashboard' ? 'active' : ''}`} data-label="Managers">
+                    <i className="bi bi-person-gear"></i>
+                </Link>
+                <Link to="/superadmin/employees" className={`dock-item ${location.pathname === '/superadmin/employees' ? 'active' : ''}`} data-label="Employees">
+                    <i className="bi bi-people"></i>
+                </Link>
+                <Link to="/superadmin/announcements" className={`dock-item ${location.pathname === '/superadmin/announcements' ? 'active' : ''}`} data-label="Announcements">
+                    <i className="bi bi-megaphone"></i>
+                </Link>
+                <div className="dock-separator"></div>
+                <div className="dock-item text-danger" onClick={() => { localStorage.clear(); navigate("/login"); }} style={{cursor:'pointer'}} data-label="Logout">
+                    <i className="bi bi-box-arrow-right"></i>
+                </div>
+            </div>
+        </div>
+    );
 
     return (
-        <Container fluid className="dashboard-container">
-            <Row className="g-0">
-                {/* Sidebar */}
-                <Col md={2} className="sidebar bg-primary text-white vh-100 sticky-top">
-                    <div className="sidebar-header p-4 text-center">
-                        <h4 className="text-white">Admin Portal</h4>
-                    </div>
-                    <Nav className="flex-column p-3">
-                        <Nav.Item className="mb-2">
-                            <Nav.Link as={Link} to="/superadmindashboard" className="text-white hover-bg-primary-dark rounded">
-                                <i className="bi bi-person-gear me-2"></i>Manager Management
-                            </Nav.Link>
-                        </Nav.Item>
-                        <Nav.Item className="mb-2">
-                            <Nav.Link as={Link} to="/superadmin/employees" className="text-white hover-bg-primary-dark rounded">
-                                <i className="bi bi-people-fill me-2"></i>Employee Management
-                            </Nav.Link>
-                        </Nav.Item>
-                        <Nav.Item className="mb-2">
-                            <Nav.Link as={Link} to="/superadmin/announcements" className="text-white active bg-primary-dark rounded">
-                                <i className="bi bi-megaphone me-2"></i>Announcements
-                            </Nav.Link>
-                        </Nav.Item>
-                        <Nav.Item className="mt-4">
-                            <Button
-                                variant="outline-light"
-                                size="sm"
-                                className="w-100"
-                                onClick={handleLogout}
-                            >
-                                <i className="bi bi-box-arrow-left me-2"></i>Logout
-                            </Button>
-                        </Nav.Item>
-                    </Nav>
-                </Col>
-                <Col md={10} className="main-content p-4">
-                    <div className="d-flex justify-content-between align-items-center mb-4">
-                        <h2 className="text-primary fw-bold">Company Announcements</h2>
-                    </div>
+        <div className="dashboard-container">
+            <Container className="main-content">
+                <div className="mb-5">
+                    <h1 className="fw-bold mb-1">Announcements</h1>
+                    <p className="text-muted">Broadcast updates to the entire organization.</p>
+                </div>
 
-                    {error && <Alert variant="danger">{error}</Alert>}
+                <Row className="g-4">
+                    <Col lg={4}>
+                        <div className="card-brave p-4 sticky-top" style={{top: '20px'}}>
+                            <h5 className="fw-bold mb-4">Create Post</h5>
+                            <Form onSubmit={handleSubmit}>
+                                <Form.Group className="mb-3">
+                                    <Form.Control 
+                                        className="bg-light border-0 p-3 rounded-3" 
+                                        placeholder="Title" 
+                                        value={formData.title} 
+                                        onChange={e => setFormData({...formData, title: e.target.value})} 
+                                        required 
+                                    />
+                                </Form.Group>
+                                <Form.Group className="mb-4">
+                                    <Form.Control 
+                                        as="textarea" 
+                                        rows={6} 
+                                        className="bg-light border-0 p-3 rounded-3" 
+                                        placeholder="Write your announcement..." 
+                                        value={formData.content} 
+                                        onChange={e => setFormData({...formData, content: e.target.value})} 
+                                        required 
+                                    />
+                                </Form.Group>
+                                <Button type="submit" className="btn-brave w-100 py-3">Publish Now</Button>
+                            </Form>
+                        </div>
+                    </Col>
 
-                    <Row>
-                        <Col md={6}>
-                            <Card className="mb-4 shadow-sm">
-                                <Card.Header>Create New Announcement</Card.Header>
-                                <Card.Body>
-                                    <Form onSubmit={handleFormSubmit}>
-                                        <Form.Group className="mb-3">
-                                            <Form.Label>Title</Form.Label>
-                                            <Form.Control
-                                                type="text"
-                                                name="title"
-                                                value={formData.title}
-                                                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                                                required
-                                            />
-                                        </Form.Group>
-                                        <Form.Group className="mb-3">
-                                            <Form.Label>Content</Form.Label>
-                                            <Form.Control
-                                                as="textarea"
-                                                rows={4}
-                                                name="content"
-                                                value={formData.content}
-                                                onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                                                required
-                                            />
-                                        </Form.Group>
-                                        <Button variant="primary" type="submit" disabled={loading}>
-                                            {loading ? <Spinner animation="border" size="sm" /> : "Publish Announcement"}
-                                        </Button>
-                                    </Form>
-                                </Card.Body>
-                            </Card>
-                        </Col>
-                        <Col md={6}>
-                            <Card className="shadow-sm">
-                                <Card.Header>Recent Announcements</Card.Header>
-                                <Card.Body>
-                                    {loading ? (
-                                        <div className="text-center py-3">
-                                            <Spinner animation="border" variant="primary" />
-                                        </div>
-                                    ) : (
-                                        announcements.length > 0 ? (
-                                            <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
-                                                {announcements.map((announcement) => (
-                                                    <div key={announcement.id} className="mb-3 border-bottom pb-2">
-                                                        <h5 className="text-primary">{announcement.title}</h5>
-                                                        <p>{announcement.content}</p>
-                                                        <div className="text-end text-muted small">Posted: {new Date(announcement.date).toLocaleDateString()}</div>
-                                                    </div>
-                                                ))}
+                    <Col lg={8}>
+                        <div className="card-brave h-100">
+                            <div className="card-header-brave">Recent Updates</div>
+                            <div className="p-0">
+                                {loading ? <div className="text-center py-5"><Spinner animation="border" variant="danger"/></div> : (
+                                    announcements.length > 0 ? announcements.map((item, idx) => (
+                                        <div key={item.id} className={`p-4 ${idx !== announcements.length - 1 ? 'border-bottom' : ''}`}>
+                                            <div className="d-flex justify-content-between mb-2">
+                                                <h5 className="fw-bold text-dark mb-0">{item.title}</h5>
+                                                <small className="text-muted bg-light px-2 py-1 rounded">{new Date(item.date).toLocaleDateString()}</small>
                                             </div>
-                                        ) : (
-                                            <div className="text-center text-muted py-3">No announcements found.</div>
-                                        )
-                                    )}
-                                </Card.Body>
-                            </Card>
-                        </Col>
-                    </Row>
-                </Col>
-            </Row>
-        </Container>
+                                            <p className="text-secondary mb-0" style={{lineHeight: '1.6'}}>{item.content}</p>
+                                        </div>
+                                    )) : <div className="p-5 text-center text-muted">No announcements yet.</div>
+                                )}
+                            </div>
+                        </div>
+                    </Col>
+                </Row>
+            </Container>
+            <AdminDock />
+        </div>
     );
 };
 

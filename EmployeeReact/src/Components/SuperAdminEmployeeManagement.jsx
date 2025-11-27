@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Table, Spinner, Nav, Button, Alert, Accordion, Badge } from 'react-bootstrap';
+import { Container, Table, Spinner, Button, Alert, Accordion, Badge } from 'react-bootstrap';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import 'bootstrap-icons/font/bootstrap-icons.css';
@@ -17,185 +17,111 @@ const SuperAdminEmployeeManagement = () => {
         try {
             setLoading(true);
             const managersResponse = await axios.get(`${baseUrl}/manager/allManagers`);
-            const managersData = managersResponse.data;
-
             const managersWithEmployees = await Promise.all(
-                managersData.map(async (manager) => {
+                managersResponse.data.map(async (manager) => {
                     const employeesResponse = await axios.get(`${baseUrl}/api/employees/byManager/${manager.id}`);
-                    return {
-                        ...manager,
-                        employees: employeesResponse.data || []
-                    };
+                    return { ...manager, employees: employeesResponse.data || [] };
                 })
             );
             setManagers(managersWithEmployees);
         } catch (err) {
-            console.error("Error fetching data:", err);
-            setError("Failed to fetch data. Please check the API server.");
+            setError("Failed to fetch data.");
         } finally {
             setLoading(false);
         }
     };
 
-    useEffect(() => {
+    useEffect(() => { fetchManagersWithEmployees(); }, []);
+
+    const handleUpdateStatus = async (id, status) => {
+        await axios.post(`${baseUrl}/api/employees/updateEmployeeStatus/${id}`, null, { params: { status } });
         fetchManagersWithEmployees();
-    }, []);
-
-    const handleUpdateEmployeeStatus = async (employeeId, status) => {
-        try {
-            const url = `${baseUrl}/api/employees/updateEmployeeStatus/${employeeId}`;
-            const response = await axios.post(url, null, { params: { status } });
-
-            fetchManagersWithEmployees(); // Refresh list
-            alert(response.data);
-        } catch (err) {
-            console.error("Error updating employee status:", err);
-            alert("Failed to update employee status.");
-        }
     };
 
-    const handleLogout = () => {
-        localStorage.clear();
-        navigate("/login");
+    const getStatusBadge = (status) => {
+        const colors = { 'ACCEPTED': 'success', 'PENDING': 'warning', 'REJECTED': 'danger' };
+        return <Badge bg={colors[status] || 'secondary'} className="px-3 py-2 rounded-pill">{status}</Badge>;
     };
+
+    const AdminDock = () => (
+        <div className="brave-dock-container">
+            <div className="brave-dock">
+                <Link to="/superadmindashboard" className={`dock-item ${location.pathname === '/superadmindashboard' ? 'active' : ''}`} data-label="Managers">
+                    <i className="bi bi-person-gear"></i>
+                </Link>
+                <Link to="/superadmin/employees" className={`dock-item ${location.pathname === '/superadmin/employees' ? 'active' : ''}`} data-label="Employees">
+                    <i className="bi bi-people"></i>
+                </Link>
+                <Link to="/superadmin/announcements" className={`dock-item ${location.pathname === '/superadmin/announcements' ? 'active' : ''}`} data-label="Announcements">
+                    <i className="bi bi-megaphone"></i>
+                </Link>
+                <div className="dock-separator"></div>
+                <div className="dock-item text-danger" onClick={() => { localStorage.clear(); navigate("/login"); }} style={{cursor:'pointer'}} data-label="Logout">
+                    <i className="bi bi-box-arrow-right"></i>
+                </div>
+            </div>
+        </div>
+    );
 
     return (
-        <Container fluid className="dashboard-container">
-            <Row className="g-0">
-                {/* Sidebar */}
-                <Col md={2} className="sidebar bg-primary text-white vh-100 sticky-top">
-                    <div className="sidebar-header p-4 text-center">
-                        <h4 className="text-white">Admin Portal</h4>
-                    </div>
-                    <Nav className="flex-column p-3">
-                        <Nav.Item className="mb-2">
-                            <Nav.Link as={Link} to="/superadmindashboard" className={`text-white hover-bg-primary-dark rounded ${location.pathname === '/superadmindashboard' ? 'active bg-primary-dark' : ''}`}>
-                                <i className="bi bi-person-gear me-2"></i>Manager Management
-                            </Nav.Link>
-                        </Nav.Item>
-                        <Nav.Item className="mb-2">
-                            <Nav.Link as={Link} to="/superadmin/employees" className={`text-white hover-bg-primary-dark rounded ${location.pathname === '/superadmin/employees' ? 'active bg-primary-dark' : ''}`}>
-                                <i className="bi bi-people-fill me-2"></i>Employee Management
-                            </Nav.Link>
-                        </Nav.Item>
-                        <Nav.Item className="mb-2">
-                            <Nav.Link as={Link} to="/superadmin/announcements" className={`text-white hover-bg-primary-dark rounded ${location.pathname === '/superadmin/announcements' ? 'active bg-primary-dark' : ''}`}>
-                                <i className="bi bi-megaphone me-2"></i>Announcements
-                            </Nav.Link>
-                        </Nav.Item>
-                        <Nav.Item className="mt-4">
-                            <Button
-                                variant="outline-light"
-                                size="sm"
-                                className="w-100"
-                                onClick={handleLogout}
-                            >
-                                <i className="bi bi-box-arrow-left me-2"></i>Logout
-                            </Button>
-                        </Nav.Item>
-                    </Nav>
-                </Col>
+        <div className="dashboard-container">
+            <Container className="main-content">
+                <div className="mb-5">
+                    <h1 className="fw-bold mb-1">Employee Directory</h1>
+                    <p className="text-muted">Monitor employee status across all departments.</p>
+                </div>
 
-                {/* Main Content */}
-                <Col md={10} className="main-content p-4">
-                    <div className="d-flex justify-content-between align-items-center mb-4">
-                        <h2 className="text-primary fw-bold">Centralized Employee Management</h2>
-                    </div>
+                {error && <Alert variant="danger">{error}</Alert>}
 
-                    {error && <Alert variant="danger">{error}</Alert>}
-
-                    {loading ? (
-                        <div className="text-center py-5">
-                            <Spinner animation="border" role="status" variant="primary" />
-                            <p className="mt-2">Loading employee data...</p>
-                        </div>
-                    ) : (
-                        <Accordion defaultActiveKey="0">
-                            {managers.map((manager, index) => (
-                                <Accordion.Item eventKey={index.toString()} key={manager.id} className="mb-3">
-                                    <Accordion.Header>
-                                        <div className="d-flex w-100 align-items-center justify-content-between pe-3">
-                                            <span>
-                                                <i className="bi bi-person-badge-fill me-2"></i>
-                                                Manager: {manager.name} ({manager.employees.length} Employees)
-                                            </span>
-                                            <Badge bg="secondary">{manager.org}</Badge>
+                {loading ? <div className="text-center py-5"><Spinner animation="border" variant="danger"/></div> : (
+                    <div className="d-grid gap-4">
+                        {managers.map((manager) => (
+                            <div key={manager.id} className="card-brave">
+                                <div className="card-header-brave d-flex justify-content-between align-items-center">
+                                    <div className="d-flex align-items-center gap-3">
+                                        <div className="bg-light rounded-circle p-2 d-flex"><i className="bi bi-building text-danger"></i></div>
+                                        <div>
+                                            <div>{manager.org}</div>
+                                            <div className="small text-muted fw-normal">Manager: {manager.name}</div>
                                         </div>
-                                    </Accordion.Header>
-                                    <Accordion.Body>
-                                        {manager.employees.length > 0 ? (
-                                            <div className="table-responsive">
-                                                <Table striped bordered hover className="mb-0">
-                                                    <thead>
-                                                        <tr>
-                                                            <th>ID</th>
-                                                            <th>Name</th>
-                                                            <th>Email</th>
-                                                            <th>Status</th>
-                                                            <th>Actions</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {manager.employees.map((employee) => (
-                                                            <tr key={employee.id}>
-                                                                <td>{employee.id}</td>
-                                                                <td>{employee.name}</td>
-                                                                <td>{employee.email}</td>
-                                                                <td>
-                                                                    <Badge bg={
-                                                                        employee.status === 'ACCEPTED' ? 'success' :
-                                                                        employee.status === 'PENDING' ? 'warning' :
-                                                                        employee.status === 'REJECTED' ? 'danger' : 'secondary'
-                                                                    }>
-                                                                        {employee.status}
-                                                                    </Badge>
-                                                                </td>
-                                                                <td>
-                                                                    {employee.status === "PENDING" && (
-                                                                        <>
-                                                                            <Button
-                                                                                variant="success"
-                                                                                size="sm"
-                                                                                className="me-2"
-                                                                                onClick={() => handleUpdateEmployeeStatus(employee.id, "ACCEPTED")}
-                                                                            >
-                                                                                Accept
-                                                                            </Button>
-                                                                            <Button
-                                                                                variant="warning"
-                                                                                size="sm"
-                                                                                onClick={() => handleUpdateEmployeeStatus(employee.id, "REJECTED")}
-                                                                            >
-                                                                                Reject
-                                                                            </Button>
-                                                                        </>
-                                                                    )}
-                                                                    {employee.status === "ACCEPTED" && (
-                                                                        <Button
-                                                                            variant="danger"
-                                                                            size="sm"
-                                                                            onClick={() => handleUpdateEmployeeStatus(employee.id, "DEACTIVATED")}
-                                                                        >
-                                                                            Deactivate
-                                                                        </Button>
-                                                                    )}
-                                                                </td>
-                                                            </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </Table>
-                                            </div>
-                                        ) : (
-                                            <div className="text-center text-muted py-3">No employees found for this manager.</div>
-                                        )}
-                                    </Accordion.Body>
-                                </Accordion.Item>
-                            ))}
-                        </Accordion>
-                    )}
-                </Col>
-            </Row>
-        </Container>
+                                    </div>
+                                    <Badge bg="light" text="dark" className="border rounded-pill px-3">{manager.employees.length} Staff</Badge>
+                                </div>
+                                <div className="p-0">
+                                    <Table className="table-brave mb-0" responsive>
+                                        <thead>
+                                            <tr><th className="ps-4">Name</th><th>Email</th><th>Status</th><th className="text-end pe-4">Actions</th></tr>
+                                        </thead>
+                                        <tbody>
+                                            {manager.employees.map(emp => (
+                                                <tr key={emp.id}>
+                                                    <td className="ps-4 fw-bold">{emp.name}</td>
+                                                    <td className="text-muted">{emp.email}</td>
+                                                    <td>{getStatusBadge(emp.status)}</td>
+                                                    <td className="text-end pe-4">
+                                                        {emp.status === 'PENDING' && (
+                                                            <>
+                                                                <Button size="sm" variant="success" className="rounded-pill px-3 me-2" onClick={() => handleUpdateStatus(emp.id, 'ACCEPTED')}>Approve</Button>
+                                                                <Button size="sm" variant="outline-danger" className="rounded-pill px-3" onClick={() => handleUpdateStatus(emp.id, 'REJECTED')}>Reject</Button>
+                                                            </>
+                                                        )}
+                                                        {emp.status === 'ACCEPTED' && (
+                                                            <Button size="sm" variant="outline-secondary" className="rounded-pill px-3" onClick={() => handleUpdateStatus(emp.id, 'DEACTIVATED')}>Deactivate</Button>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                            {manager.employees.length === 0 && <tr><td colSpan="4" className="text-center py-4 text-muted">No employees found.</td></tr>}
+                                        </tbody>
+                                    </Table>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </Container>
+            <AdminDock />
+        </div>
     );
 };
 

@@ -1,66 +1,73 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { Button } from "react-bootstrap";
 import "../css/HomeNavbar.css";
 
 const HomeNavbar = () => {
-  const [isSticky, setIsSticky] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
-  const isHomePage = location.pathname === "/";
+  
+  const isAuthPage = location.pathname === "/login" || location.pathname === "/signup";
 
   useEffect(() => {
-    if (!isHomePage) {
-      setIsSticky(true); // Always sticky on non-home pages
-      return;
-    }
-
     const handleScroll = () => {
-      setIsSticky(window.scrollY > 50);
+      setScrolled(window.scrollY > 20);
     };
-
     window.addEventListener("scroll", handleScroll);
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
-    };
-  }, [isHomePage]);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Helper to scroll to section if on home page, otherwise redirect home
+  const scrollToSection = (id) => {
+    const element = document.getElementById(id);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
 
   return (
-    <nav className={`navbar ${isSticky ? "sticky" : ""} ${!isHomePage ? "non-home" : ""}`}>
-      <div className="navbar-container">
-        <Link to="/" className="navbar-logo" >
-          Crew Connect 360
+    <nav className={`brave-navbar ${scrolled || isAuthPage ? "scrolled" : ""}`}>
+      <div className="nav-container">
+        {/* Logo Left */}
+        <Link to="/" className="nav-brand" onClick={() => window.scrollTo(0, 0)}>
+          <i className="bi bi-shield-check brand-icon"></i>
+          <span>EMS<span className="brand-dot">.</span></span>
         </Link>
-        <ul className="nav-menu">
-          <li className="nav-item">
-            <Link to="/" className="nav-links" style={{fontFamily: "Lexend" }}>Home</Link>
-          </li>
-          <li className="nav-item">
-            <Link to="/about" className="nav-links" style={{fontFamily: "Lexend" }}>About</Link>
-          </li>
-          <li className="nav-item">
-            <Link to="/faq" className="nav-links" style={{fontFamily: "Lexend" }}>FAQ</Link>
-          </li>
-          <li className="nav-item">
-            <Link to="/features" className="nav-links" style={{fontFamily: "Lexend" }}>Features</Link>
-          </li>
-          <li className="nav-item">
-            <Link to="/contact" className="nav-links" style={{fontFamily: "Lexend" }}>Contact Us</Link>
-          </li>
-         
-        </ul>
-        <Link
-          to="/login"
-          className="btn btn-primary rounded-pill login-button"
-          style={{ padding: "11px", fontFamily: "Lexend" }}
-        >
-          Login
-        </Link>
-        <Link
-          to="/signup"
-          className="btn btn-outline-light rounded-pill signup-button"
-          style={{ padding: "11px", fontFamily: "Lexend" }}
-        >
-          Sign Up
-        </Link>
+
+        {/* Right Side Content */}
+        <div className="nav-right">
+          {/* Desktop Menu - Updated Links */}
+          <div className="nav-links-wrapper d-none d-md-flex">
+            <Link to="/" className="nav-link" onClick={() => window.scrollTo(0, 0)}>Home</Link>
+            <a href="#features" className="nav-link" onClick={(e) => {
+              if (location.pathname !== '/') return; // Let default link behavior handle redirect if not on home
+              e.preventDefault();
+              scrollToSection('features');
+            }}>Features</a>
+            <a href="#about" className="nav-link" onClick={(e) => {
+              if (location.pathname !== '/') return;
+              e.preventDefault();
+              scrollToSection('about');
+            }}>About</a>
+            <a href="#contact" className="nav-link" onClick={(e) => {
+              if (location.pathname !== '/') return;
+              e.preventDefault();
+              scrollToSection('contact');
+            }}>Contact</a>
+          </div>
+
+          {/* Auth Buttons Extreme Right */}
+          <div className="nav-actions">
+            <Link to="/login" className="login-link">
+              Log in
+            </Link>
+            <Link to="/signup">
+              <Button className="signup-btn">
+                Sign Up
+              </Button>
+            </Link>
+          </div>
+        </div>
       </div>
     </nav>
   );

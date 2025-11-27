@@ -1,243 +1,121 @@
 import { useState, useEffect } from 'react';
-import { Container, Card, Form, Button, Alert, Row, Col, Nav, Spinner } from 'react-bootstrap';
-import { Link, useNavigate } from 'react-router-dom';
+import { Container, Card, Form, Button, Alert, Row, Col, Spinner } from 'react-bootstrap';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import './Manager/ManagerDashboard.css'; // Reuse ManagerDashboard styles for consistency
+import './Manager/ManagerDashboard.css';
 
 const ProfilePage = () => {
     const [userData, setUserData] = useState({ name: '', email: '', org: '', password: '' });
     const [loading, setLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
-    const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const navigate = useNavigate();
+    const location = useLocation();
 
     const id = localStorage.getItem('id');
     const role = localStorage.getItem('role');
-    const userName = localStorage.getItem('userName') || 'User';
-
-    const isEmployee = role === 'EMPLOYEE';
-    //const API_BASE_URL = 'http://localhost:8080';
     const baseUrl = `${import.meta.env.VITE_API_URL}`;
-    // Determine the correct API endpoint based on the user role
-    const API_URL = isEmployee 
-        ? `${baseUrl}/api/employees/profile/${id}` 
-        : `${baseUrl}/manager/profile/${id}`;
-    
-    // Determine the base dashboard link for the sidebar
-    const baseRoute = isEmployee ? '/employeedashboard' : '/managerdashboard';
-
+    const isEmployee = role === 'EMPLOYEE';
+    const API_URL = isEmployee ? `${baseUrl}/api/employees/profile/${id}` : `${baseUrl}/manager/profile/${id}`;
 
     useEffect(() => {
-        if (!id || !role) {
-            navigate('/login');
-            return;
-        }
-
+        if (!id) { navigate('/login'); return; }
         const fetchProfile = async () => {
             try {
                 const response = await axios.get(API_URL);
-                setUserData({
-                    name: response.data.name,
-                    email: response.data.email,
-                    org: response.data.org || '', // Org for Employee/Manager
-                    password: '' // Never fetch or pre-fill password
-                });
-            } catch (err) {
-                setError('Failed to fetch profile data.');
-                console.error(err);
-            } finally {
-                setLoading(false);
-            }
+                setUserData({ ...response.data, password: '' });
+            } catch (err) { console.error(err); } 
+            finally { setLoading(false); }
         };
-
         fetchProfile();
-    }, [id, role, API_URL, navigate]);
-
-    const handleInputChange = (e) => {
-        const { name, value } = e.target;
-        setUserData(prev => ({ ...prev, [name]: value }));
-    };
+    }, [id, API_URL, navigate]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setError('');
-        setSuccess('');
         setIsSaving(true);
-
         try {
-            await axios.put(API_URL, {
-                name: userData.name,
-                password: userData.password, // Backend will only use this if not empty
-            });
-
-            // Update local storage name to reflect change in sidebar/dashboard
+            await axios.put(API_URL, { name: userData.name, password: userData.password });
             localStorage.setItem('userName', userData.name);
-            
             setSuccess('Profile updated successfully!');
-            setUserData(prev => ({ ...prev, password: '' })); // Clear password field
-        } catch (err) {
-            setError(err.response?.data?.message || 'Failed to update profile.');
-        } finally {
-            setIsSaving(false);
-        }
+            setUserData(prev => ({ ...prev, password: '' }));
+        } catch (err) { alert('Update failed.'); } 
+        finally { setIsSaving(false); }
     };
 
-    const handleLogout = () => {
-        localStorage.clear();
-        navigate('/login');
-    };
-    
-    // Reusable Sidebar component logic
-    const DashboardSidebar = () => {
-        const employeeNavItems = [
-            { to: baseRoute, icon: 'bi-speedometer2', label: 'Dashboard' },
-            { to: '/leave', icon: 'bi-calendar-event', label: 'Leave Management' },
+    // Shared Dock Component logic for Profile Page
+    const SharedDock = () => {
+        const items = isEmployee ? [
+            { to: '/employeedashboard', icon: 'bi-speedometer2', label: 'Dashboard' },
+            { to: '/leave', icon: 'bi-calendar-event', label: 'Leave' },
             { to: '/attendance', icon: 'bi-clock-history', label: 'Attendance' },
             { to: '/payroll', icon: 'bi-cash-stack', label: 'Payroll' },
-            { to: '/profile', icon: 'bi-person-lines-fill', label: 'Profile', isActive: true },
-            { to: '/documents', icon: 'bi-file-earmark-text', label: 'Documents' },
+            { to: '/profile', icon: 'bi-person', label: 'Profile', active: true },
+        ] : [
+            { to: '/managerdashboard', icon: 'bi-speedometer2', label: 'Dashboard' },
+            { to: '/leave/approvals', icon: 'bi-check-circle', label: 'Approvals' },
+            { to: '/attendance/manage', icon: 'bi-people', label: 'Attendance' },
+            { to: '/manager/tasks', icon: 'bi-list-check', label: 'Tasks' },
+            { to: '/managerprofile', icon: 'bi-person', label: 'Profile', active: true },
         ];
-        
-        const managerNavItems = [
-            { to: baseRoute, icon: 'bi-speedometer2', label: 'Dashboard' },
-            { to: '/leave/approvals', icon: 'bi-calendar-event', label: 'Leave Approvals' },
-            { to: '/attendance/manage', icon: 'bi-clock-history', label: 'Attendance' },
-            { to: '/managerprofile', icon: 'bi-person-lines-fill', label: 'Profile', isActive: true },
-            { to: '#', icon: 'bi-people-fill', label: 'Team Management' },
-            { to: '#', icon: 'bi-graph-up', label: 'Reports' },
-        ];
-
-        const navItems = isEmployee ? employeeNavItems : managerNavItems;
-        const portalName = isEmployee ? 'EMPLOYEE Portal' : 'Manager Portal';
-        const bgColor = isEmployee ? 'bg-dark' : 'bg-primary';
 
         return (
-            <Col md={2} className={`sidebar ${bgColor} text-white vh-100 sticky-top`}>
-                <div className="sidebar-header p-3 text-center">
-                    <h4>{portalName}</h4>
-                    <div className="employee-info mt-3">
-                        <div className={`avatar ${isEmployee ? 'bg-primary' : 'bg-white text-primary'} rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2`} 
-                             style={{ width: '60px', height: '60px' }}>
-                            <span className="fs-4">{userName.charAt(0)}</span>
-                        </div>
-                        <h6 className="mb-0">{userName}</h6>
-                        <small className="text-muted">{role}</small>
+            <div className="brave-dock-container">
+                <div className="brave-dock">
+                    {items.map((item, idx) => (
+                        <Link key={idx} to={item.to} className={`dock-item ${item.active ? 'active' : ''}`} data-label={item.label}>
+                            <i className={`bi ${item.icon}`}></i>
+                        </Link>
+                    ))}
+                    <div className="dock-separator"></div>
+                    <div className="dock-item text-danger" onClick={() => { localStorage.clear(); navigate('/login') }} style={{cursor:'pointer'}} data-label="Logout">
+                        <i className="bi bi-box-arrow-right"></i>
                     </div>
                 </div>
-
-                <Nav className="flex-column p-3">
-                    {navItems.map((item, index) => (
-                        <Nav.Item key={index} className="mb-2">
-                            <Nav.Link 
-                                as={Link} 
-                                to={item.to} 
-                                className={`text-white hover-bg-primary-dark rounded ${item.isActive ? 'active bg-primary-dark' : ''}`}
-                            >
-                                <i className={`bi ${item.icon} me-2`}></i>{item.label}
-                            </Nav.Link>
-                        </Nav.Item>
-                    ))}
-                    <Nav.Item className="mt-4">
-                        <Button 
-                            variant="outline-light" 
-                            size="sm" 
-                            className="w-100"
-                            onClick={handleLogout}
-                        >
-                            <i className="bi bi-box-arrow-left me-2"></i>Logout
-                        </Button>
-                    </Nav.Item>
-                </Nav>
-            </Col>
+            </div>
         );
     };
 
     return (
-        <Container fluid className="dashboard-container px-0">
-            <Row className="g-0">
-                <DashboardSidebar />
-                <Col md={10} className="main-content p-4">
-                    <h2 className="mb-4">My Profile</h2>
-                    
-                    {loading ? (
-                        <div className="text-center py-5"><Spinner animation="border" /></div>
-                    ) : (
-                        <Card>
-                            <Card.Body>
-                                {error && <Alert variant="danger">{error}</Alert>}
-                                {success && <Alert variant="success">{success}</Alert>}
-                                
+        <div className="dashboard-container">
+            <Container className="main-content">
+                <div className="row justify-content-center">
+                    <Col lg={6} className="pt-5">
+                        <div className="card-brave p-5">
+                            <div className="text-center mb-5">
+                                <div className="bg-light rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3" style={{width: '100px', height: '100px'}}>
+                                    <i className="bi bi-person text-secondary" style={{fontSize: '3rem'}}></i>
+                                </div>
+                                <h2 className="fw-bold">{userData.name}</h2>
+                                <p className="text-muted">{userData.email}</p>
+                            </div>
+
+                            {success && <Alert variant="success" className="rounded-3">{success}</Alert>}
+
+                            {loading ? <div className="text-center"><Spinner animation="border" variant="danger"/></div> : (
                                 <Form onSubmit={handleSubmit}>
-                                    <Row>
-                                        <Col md={6}>
-                                            <Form.Group className="mb-3">
-                                                <Form.Label>Full Name</Form.Label>
-                                                <Form.Control 
-                                                    type="text" 
-                                                    name="name"
-                                                    value={userData.name}
-                                                    onChange={handleInputChange}
-                                                    required
-                                                />
-                                            </Form.Group>
-                                        </Col>
-                                        <Col md={6}>
-                                            <Form.Group className="mb-3">
-                                                <Form.Label>Email Address</Form.Label>
-                                                <Form.Control 
-                                                    type="email" 
-                                                    name="email"
-                                                    value={userData.email}
-                                                    readOnly 
-                                                    disabled
-                                                />
-                                            </Form.Group>
-                                        </Col>
-                                    </Row>
-                                    
-                                    <Row>
-                                        <Col md={6}>
-                                            <Form.Group className="mb-3">
-                                                <Form.Label>New Password (Leave blank to keep current)</Form.Label>
-                                                <Form.Control 
-                                                    type="password" 
-                                                    name="password"
-                                                    value={userData.password}
-                                                    onChange={handleInputChange}
-                                                    placeholder="Enter new password"
-                                                />
-                                            </Form.Group>
-                                        </Col>
-                                        <Col md={6}>
-                                            <Form.Group className="mb-3">
-                                                <Form.Label>Organization</Form.Label>
-                                                <Form.Control 
-                                                    type="text" 
-                                                    name="org"
-                                                    value={userData.org}
-                                                    readOnly 
-                                                    disabled
-                                                />
-                                            </Form.Group>
-                                        </Col>
-                                    </Row>
-                                    
-                                    <Button variant="primary" type="submit" disabled={isSaving}>
-                                        {isSaving ? (
-                                            <>
-                                                <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" />
-                                                Saving...
-                                            </>
-                                        ) : 'Update Profile'}
+                                    <Form.Group className="mb-4">
+                                        <Form.Label className="small fw-bold text-secondary">FULL NAME</Form.Label>
+                                        <Form.Control type="text" className="bg-light border-0 p-3 rounded-3" value={userData.name} onChange={e => setUserData({...userData, name: e.target.value})} />
+                                    </Form.Group>
+                                    <Form.Group className="mb-4">
+                                        <Form.Label className="small fw-bold text-secondary">ORGANIZATION</Form.Label>
+                                        <Form.Control type="text" className="bg-light border-0 p-3 rounded-3" value={userData.org} disabled />
+                                    </Form.Group>
+                                    <Form.Group className="mb-5">
+                                        <Form.Label className="small fw-bold text-secondary">NEW PASSWORD</Form.Label>
+                                        <Form.Control type="password" className="bg-light border-0 p-3 rounded-3" placeholder="Enter only to change" value={userData.password} onChange={e => setUserData({...userData, password: e.target.value})} />
+                                    </Form.Group>
+                                    <Button type="submit" className="btn-brave w-100 py-3" disabled={isSaving}>
+                                        {isSaving ? 'Updating...' : 'Save Profile Changes'}
                                     </Button>
                                 </Form>
-                            </Card.Body>
-                        </Card>
-                    )}
-                </Col>
-            </Row>
-        </Container>
+                            )}
+                        </div>
+                    </Col>
+                </div>
+            </Container>
+            <SharedDock />
+        </div>
     );
 };
 

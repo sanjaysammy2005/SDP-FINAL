@@ -1,206 +1,110 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, Table, Alert, Spinner, Nav, Button, Badge } from 'react-bootstrap';
+import { Container, Row, Col, Badge, Button, Spinner } from 'react-bootstrap';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import 'bootstrap-icons/font/bootstrap-icons.css';
 import './EmployeeDashboard.css';
 
-const baseUrl = `${import.meta.env.VITE_API_URL}`;
-
 const EmployeeTaskView = () => {
-    const [tasks, setTasks] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const navigate = useNavigate();
-    const location = useLocation();
-    const employeeId = localStorage.getItem('employeeId');
-    const employeeName = localStorage.getItem('userName') || 'Employee';
-    //const API_BASE_URL = 'http://localhost:8080';
+  const [tasks, setTasks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const employeeId = localStorage.getItem('employeeId');
+  const baseUrl = `${import.meta.env.VITE_API_URL}`;
 
-    const fetchTasks = async () => {
-        try {
-            setLoading(true);
-            const response = await axios.get(`${baseUrl}/api/tasks/employee/${employeeId}`);
-            setTasks(response.data);
-        } catch (err) {
-            setError("Failed to fetch tasks. Please check the API server.");
-            console.error("Task fetch error:", err);
-        } finally {
-            setLoading(false);
-        }
-    };
+  useEffect(() => {
+    if (!employeeId) { navigate('/login'); return; }
+    fetchTasks();
+  }, [employeeId]);
 
-    useEffect(() => {
-        if (employeeId) {
-            fetchTasks();
-        } else {
-            navigate('/login');
-        }
-    }, [employeeId, navigate]);
+  const fetchTasks = async () => {
+    setLoading(true);
+    try {
+      const res = await axios.get(`${baseUrl}/api/tasks/employee/${employeeId}`);
+      setTasks(res.data);
+    } catch (err) { console.error(err); } 
+    finally { setLoading(false); }
+  };
 
-    const handleUpdateStatus = async (taskId, newStatus) => {
-        try {
-            await axios.put(`${baseUrl}/api/tasks/${taskId}/status?status=${newStatus}`);
-            fetchTasks(); // Refresh the task list
-            alert(`Task status updated to ${newStatus}.`);
-        } catch (err) {
-            console.error("Error updating task status:", err);
-            alert("Failed to update task status.");
-        }
-    };
+  const updateStatus = async (id, status) => {
+    await axios.put(`${baseUrl}/api/tasks/${id}/status?status=${status}`);
+    fetchTasks();
+  };
 
-    const getStatusBadge = (status) => {
-        switch (status) {
-            case 'NOT_STARTED': return 'secondary';
-            case 'IN_PROGRESS': return 'primary';
-            case 'COMPLETED': return 'success';
-            default: return 'secondary';
-        }
-    };
+  const getStatusBadge = (status) => {
+    const map = { 'NOT_STARTED': 'secondary', 'IN_PROGRESS': 'primary', 'COMPLETED': 'success' };
+    return <Badge bg={map[status]} className="px-3 py-2 rounded-pill">{status.replace('_', ' ')}</Badge>;
+  };
 
-    const handleLogout = () => {
-        localStorage.clear();
-        navigate('/login');
-    };
-    
-    const getLinkClass = (path) => {
-        return `text-white hover-bg-primary-dark rounded ${location.pathname === path ? 'active bg-primary-dark' : ''}`;
-    };
+  const EmployeeDock = () => (
+    <div className="brave-dock-container">
+      <div className="brave-dock">
+        <Link to="/employeedashboard" className={`dock-item ${location.pathname === '/employeedashboard' ? 'active' : ''}`} data-label="Dashboard">
+          <i className="bi bi-speedometer2"></i>
+        </Link>
+        <Link to="/leave" className={`dock-item ${location.pathname === '/leave' ? 'active' : ''}`} data-label="Leave">
+          <i className="bi bi-calendar-event"></i>
+        </Link>
+        <Link to="/attendance" className={`dock-item ${location.pathname === '/attendance' ? 'active' : ''}`} data-label="Attendance">
+          <i className="bi bi-clock-history"></i>
+        </Link>
+        <Link to="/tasks" className={`dock-item ${location.pathname === '/tasks' ? 'active' : ''}`} data-label="Tasks">
+          <i className="bi bi-list-task"></i>
+        </Link>
+        <Link to="/payroll" className={`dock-item ${location.pathname === '/payroll' ? 'active' : ''}`} data-label="Payroll">
+          <i className="bi bi-cash-stack"></i>
+        </Link>
+        <Link to="/profile" className={`dock-item ${location.pathname === '/profile' ? 'active' : ''}`} data-label="Profile">
+          <i className="bi bi-person"></i>
+        </Link>
+        <div className="dock-separator"></div>
+        <div className="dock-item text-danger" onClick={() => { localStorage.clear(); navigate('/login'); }} style={{cursor:'pointer'}} data-label="Logout">
+          <i className="bi bi-box-arrow-right"></i>
+        </div>
+      </div>
+    </div>
+  );
 
-    return (
-        <Container fluid className="dashboard-container px-0">
-            <Row className="g-0">
-                <Col md={2} className="sidebar vh-100 sticky-top">
-                    <div className="sidebar-header p-3 text-center">
-                        <h4>EMPLOYEE Portal</h4>
-                        <div className="employee-info mt-3">
-                            <div className="avatar bg-primary rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2"
-                                 style={{ width: '60px', height: '60px' }}>
-                                <span className="fs-4">{employeeName.charAt(0)}</span>
-                            </div>
-                            <h6 className="mb-0">{employeeName}</h6>
-                            <small className="text-muted">Employee</small>
-                        </div>
-                    </div>
-                    <Nav className="flex-column p-3">
-                        <Nav.Item>
-                            <Nav.Link as={Link} to="/employeedashboard" className={getLinkClass("/employeedashboard")}>
-                                <i className="bi bi-speedometer2 me-2"></i>Dashboard
-                            </Nav.Link>
-                        </Nav.Item>
-                        <Nav.Item>
-                            <Nav.Link as={Link} to="/leave" className={getLinkClass("/leave")}>
-                                <i className="bi bi-calendar-event me-2"></i>Leave Management
-                            </Nav.Link>
-                        </Nav.Item>
-                        <Nav.Item>
-                            <Nav.Link as={Link} to="/attendance" className={getLinkClass("/attendance")}>
-                                <i className="bi bi-clock-history me-2"></i>Attendance
-                            </Nav.Link>
-                        </Nav.Item>
-                        <Nav.Item>
-                            <Nav.Link as={Link} to="/payroll" className={getLinkClass("/payroll")}>
-                                <i className="bi bi-cash-stack me-2"></i>Payroll
-                            </Nav.Link>
-                        </Nav.Item>
-                        <Nav.Item>
-                            <Nav.Link as={Link} to="/tasks" className={getLinkClass("/tasks")}>
-                                <i className="bi bi-list-task me-2"></i>My Tasks
-                            </Nav.Link>
-                        </Nav.Item>
-                        <Nav.Item>
-                            <Nav.Link as={Link} to="/profile" className={getLinkClass("/profile")}>
-                                <i className="bi bi-person-lines-fill me-2"></i>Profile
-                            </Nav.Link>
-                        </Nav.Item>
-                        <Nav.Item>
-                            <Nav.Link as={Link} to="/documents" className={getLinkClass("/documents")}>
-                                <i className="bi bi-file-earmark-text me-2"></i>Documents
-                            </Nav.Link>
-                        </Nav.Item>
-                    </Nav>
-                    <div className="logout-container">
-                        <Button
-                            variant="outline-light"
-                            size="sm"
-                            className="w-100"
-                            onClick={handleLogout}
-                        >
-                            <i className="bi bi-box-arrow-left me-2"></i>Logout
-                        </Button>
-                    </div>
-                </Col>
-                <Col md={10} className="main-content p-4">
-                    <h2 className="mb-4 text-primary">My Tasks</h2>
-                    {error && <Alert variant="danger">{error}</Alert>}
-                    {loading ? (
-                        <div className="text-center py-5">
-                            <Spinner animation="border" role="status" variant="primary" />
-                        </div>
-                    ) : (
-                        <Card className="shadow-sm">
-                            <Card.Body>
-                                {tasks.length > 0 ? (
-                                    <div className="table-responsive">
-                                        <Table striped bordered hover className="mb-0">
-                                            <thead>
-                                                <tr>
-                                                    <th>Title</th>
-                                                    <th>Description</th>
-                                                    <th>Due Date</th>
-                                                    <th>Status</th>
-                                                    <th>Actions</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {tasks.map(task => (
-                                                    <tr key={task.id}>
-                                                        <td>{task.title}</td>
-                                                        <td>{task.description}</td>
-                                                        <td>{task.dueDate}</td>
-                                                        <td>
-                                                            <Badge bg={getStatusBadge(task.status)}>
-                                                                {task.status}
-                                                            </Badge>
-                                                        </td>
-                                                        <td>
-                                                            {task.status !== 'COMPLETED' && (
-                                                                <>
-                                                                    <Button 
-                                                                        variant="success" 
-                                                                        size="sm" 
-                                                                        className="me-2"
-                                                                        onClick={() => handleUpdateStatus(task.id, 'COMPLETED')}
-                                                                    >
-                                                                        Complete
-                                                                    </Button>
-                                                                    {task.status === 'NOT_STARTED' && (
-                                                                        <Button 
-                                                                            variant="primary" 
-                                                                            size="sm"
-                                                                            onClick={() => handleUpdateStatus(task.id, 'IN_PROGRESS')}
-                                                                        >
-                                                                            Start
-                                                                        </Button>
-                                                                    )}
-                                                                </>
-                                                            )}
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </Table>
-                                    </div>
-                                ) : (
-                                    <div className="text-center text-muted py-3">No tasks assigned.</div>
-                                )}
-                            </Card.Body>
-                        </Card>
+  return (
+    <div className="dashboard-container">
+      <Container className="main-content">
+        <div className="mb-5">
+          <h1 className="fw-bold mb-1">My Tasks</h1>
+          <p className="text-muted">Track your assignments and progress.</p>
+        </div>
+
+        {loading ? <div className="text-center py-5"><Spinner animation="border" variant="danger"/></div> : (
+          <Row className="g-3">
+            {tasks.length > 0 ? tasks.map(task => (
+              <Col md={6} lg={4} key={task.id}>
+                <div className="card-brave p-4 h-100 d-flex flex-column">
+                  <div className="d-flex justify-content-between mb-3">
+                    <span className="text-muted small fw-bold">DUE: {task.dueDate}</span>
+                    {getStatusBadge(task.status)}
+                  </div>
+                  <h5 className="fw-bold mb-2">{task.title}</h5>
+                  <p className="text-secondary small flex-grow-1">{task.description}</p>
+                  
+                  <div className="mt-3 pt-3 border-top d-flex gap-2">
+                    {task.status !== 'COMPLETED' && (
+                      <>
+                        {task.status === 'NOT_STARTED' && (
+                          <Button size="sm" className="btn-brave w-100" onClick={() => updateStatus(task.id, 'IN_PROGRESS')}>Start Task</Button>
+                        )}
+                        <Button size="sm" variant="success" className="w-100 rounded-pill fw-bold" onClick={() => updateStatus(task.id, 'COMPLETED')}>Complete</Button>
+                      </>
                     )}
-                </Col>
-            </Row>
-        </Container>
-    );
+                    {task.status === 'COMPLETED' && <span className="text-success small fw-bold mx-auto"><i className="bi bi-check-all me-1"></i> Done</span>}
+                  </div>
+                </div>
+              </Col>
+            )) : <Col xs={12}><div className="text-center py-5 text-muted">No tasks assigned.</div></Col>}
+          </Row>
+        )}
+      </Container>
+      <EmployeeDock />
+    </div>
+  );
 };
 
 export default EmployeeTaskView;
